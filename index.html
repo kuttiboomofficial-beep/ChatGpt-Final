@@ -14,6 +14,7 @@ button,input,select,textarea{font:inherit}
 button{border:0;border-radius:10px;padding:11px 16px;background:#111;color:#fff;cursor:pointer;font-weight:700}
 button.orange{background:#f47b00}button.green{background:#198c43}button.red{background:#c62828}button.light{background:#eee;color:#222}
 header{background:#111;color:#fff;padding:18px 26px;border-bottom:5px solid #f47b00;position:sticky;top:0;z-index:20}
+#printPageBtn{float:right;margin-top:-42px;background:#fff;color:#222;border:0;padding:10px 14px;border-radius:10px}#printPageBtn:hover{background:#eee}
 #brand{font-size:24px;font-weight:800}#subtitle{color:#bbb;margin-top:5px}
 nav{display:flex;gap:10px;overflow-x:auto;white-space:nowrap;background:#fff;padding:10px;border-bottom:1px solid #ddd;position:sticky;top:91px;z-index:19}
 nav button{background:#eee;color:#333;padding:12px 18px;border-radius:13px}
@@ -55,11 +56,35 @@ td button{margin:2px;padding:8px 10px;font-size:13px}
  .quick{grid-template-columns:1fr 1fr}.actions input,.actions select{min-width:145px;flex:1}
 }
 
+@media print{
+ @page{size:A4 portrait;margin:12mm}
+ body{background:#fff!important;color:#111!important}
+ header,nav,#toast,.modalbg,#printPageBtn,.no-print{display:none!important}
+ main{max-width:none!important;margin:0!important;padding:0!important}
+ section{display:none!important}
+ section.active{display:block!important}
+ .card,.tile,.hero{box-shadow:none!important;border:1px solid #bbb!important;break-inside:avoid}
+ h2{font-size:22px!important;margin:0 0 12px!important}
+ .grid{grid-template-columns:repeat(4,1fr)!important;gap:8px!important}
+ .kpi{font-size:20px!important}
+ .hero{background:#111!important;color:#fff!important}
+ .tablewrap{break-inside:auto!important}
+ tr{break-inside:avoid;page-break-inside:avoid}
+ .actions{display:none!important}
+ button{display:none!important}
+ .tablewrap{overflow:visible!important}
+ table{min-width:0!important;width:100%!important;font-size:11px}
+ th,td{padding:6px!important;border:1px solid #ccc!important}
+ input,select,textarea{border:0!important;background:#fff!important;padding:4px!important}
+ .city-suggestions{display:none!important}
+}
+@media(max-width:650px){#printPageBtn{float:none;position:absolute;right:14px;top:14px;margin:0;padding:9px 11px;font-size:13px}}
+
 .city-field{position:relative}.city-suggestions{display:none;position:absolute;left:0;right:0;top:100%;z-index:100;background:#fff;border:1px solid #d5d5d5;border-radius:10px;box-shadow:0 8px 22px #0002;overflow:hidden;margin-top:4px}.city-option{width:100%;border:0;border-radius:0;background:#fff;color:#222;text-align:left;padding:11px 13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}.city-option:hover,.city-option:focus{background:#f6f6f6}.city-option span{color:#777;font-size:13px;margin-left:12px}
 </style>
 </head>
 <body>
-<header><div id="brand">SHREE JI GOLD CREATOR LLP</div><div id="subtitle">Customer CRM • Orders • Production • WhatsApp • Reports</div></header>
+<header><div id="brand">SHREE JI GOLD CREATOR LLP</div><div id="subtitle">Customer CRM • Orders • Production • WhatsApp • Reports</div><button id="printPageBtn" class="light no-print" onclick="printCurrentPage()">🖨️ Print Page</button></header>
 <nav id="nav"></nav>
 <main>
 <section id="dashboard"></section>
@@ -151,366 +176,19 @@ function recentOrders(){
 }
 
 const CITY_STATE = {
-"Chennai":"Tamil Nadu",
-"Coimbatore":"Tamil Nadu",
-"Madurai":"Tamil Nadu",
-"Tiruchirappalli":"Tamil Nadu",
-"Trichy":"Tamil Nadu",
-"Salem":"Tamil Nadu",
-"Tirunelveli":"Tamil Nadu",
-"Thoothukudi":"Tamil Nadu",
-"Tuticorin":"Tamil Nadu",
-"Erode":"Tamil Nadu",
-"Tiruppur":"Tamil Nadu",
-"Vellore":"Tamil Nadu",
-"Thanjavur":"Tamil Nadu",
-"Dindigul":"Tamil Nadu",
-"Karur":"Tamil Nadu",
-"Namakkal":"Tamil Nadu",
-"Sivakasi":"Tamil Nadu",
-"Nagercoil":"Tamil Nadu",
-"Ooty":"Tamil Nadu",
-"Udhagamandalam":"Tamil Nadu",
-"Cuddalore":"Tamil Nadu",
-"Kanchipuram":"Tamil Nadu",
-"Hosur":"Tamil Nadu",
-"Kumbakonam":"Tamil Nadu",
-"Pudukkottai":"Tamil Nadu",
-"Ramanathapuram":"Tamil Nadu",
-"Virudhunagar":"Tamil Nadu",
-"Rajapalayam":"Tamil Nadu",
-"Pollachi":"Tamil Nadu",
-"Mettupalayam":"Tamil Nadu",
-"Mayiladuthurai":"Tamil Nadu",
-"Nagapattinam":"Tamil Nadu",
-"Villupuram":"Tamil Nadu",
-"Krishnagiri":"Tamil Nadu",
-"Dharmapuri":"Tamil Nadu",
-"Ariyalur":"Tamil Nadu",
-"Perambalur":"Tamil Nadu",
-"Tenkasi":"Tamil Nadu",
-"Sivaganga":"Tamil Nadu",
-"Tiruvallur":"Tamil Nadu",
-"Avadi":"Tamil Nadu",
-"Tambaram":"Tamil Nadu",
-"Vaniyambadi":"Tamil Nadu",
-"Ambur":"Tamil Nadu",
-"Bengaluru":"Karnataka",
-"Bangalore":"Karnataka",
-"Mysuru":"Karnataka",
-"Mysore":"Karnataka",
-"Mangaluru":"Karnataka",
-"Mangalore":"Karnataka",
-"Hubballi":"Karnataka",
-"Hubli":"Karnataka",
-"Dharwad":"Karnataka",
-"Belagavi":"Karnataka",
-"Belgaum":"Karnataka",
-"Kalaburagi":"Karnataka",
-"Gulbarga":"Karnataka",
-"Shivamogga":"Karnataka",
-"Shimoga":"Karnataka",
-"Tumakuru":"Karnataka",
-"Tumkur":"Karnataka",
-"Udupi":"Karnataka",
-"Ballari":"Karnataka",
-"Bellary":"Karnataka",
-"Vijayapura":"Karnataka",
-"Bijapur":"Karnataka",
-"Davangere":"Karnataka",
-"Hassan":"Karnataka",
-"Raichur":"Karnataka",
-"Bidar":"Karnataka",
-"Mandya":"Karnataka",
-"Chikkamagaluru":"Karnataka",
-"Chitradurga":"Karnataka",
-"Kolar":"Karnataka",
-"Hospet":"Karnataka",
-"Thiruvananthapuram":"Kerala",
-"Trivandrum":"Kerala",
-"Kochi":"Kerala",
-"Ernakulam":"Kerala",
-"Kozhikode":"Kerala",
-"Calicut":"Kerala",
-"Thrissur":"Kerala",
-"Kollam":"Kerala",
-"Alappuzha":"Kerala",
-"Alleppey":"Kerala",
-"Kannur":"Kerala",
-"Palakkad":"Kerala",
-"Kottayam":"Kerala",
-"Malappuram":"Kerala",
-"Kasaragod":"Kerala",
-"Pathanamthitta":"Kerala",
-"Hyderabad":"Telangana",
-"Warangal":"Telangana",
-"Nizamabad":"Telangana",
-"Karimnagar":"Telangana",
-"Khammam":"Telangana",
-"Ramagundam":"Telangana",
-"Mahbubnagar":"Telangana",
-"Secunderabad":"Telangana",
-"Siddipet":"Telangana",
-"Nalgonda":"Telangana",
-"Adilabad":"Telangana",
-"Visakhapatnam":"Andhra Pradesh",
-"Vijayawada":"Andhra Pradesh",
-"Guntur":"Andhra Pradesh",
-"Nellore":"Andhra Pradesh",
-"Tirupati":"Andhra Pradesh",
-"Kurnool":"Andhra Pradesh",
-"Rajahmundry":"Andhra Pradesh",
-"Kakinada":"Andhra Pradesh",
-"Kadapa":"Andhra Pradesh",
-"Anantapur":"Andhra Pradesh",
-"Eluru":"Andhra Pradesh",
-"Ongole":"Andhra Pradesh",
-"Srikakulam":"Andhra Pradesh",
-"Vizianagaram":"Andhra Pradesh",
-"Machilipatnam":"Andhra Pradesh",
-"Mumbai":"Maharashtra",
-"Pune":"Maharashtra",
-"Nagpur":"Maharashtra",
-"Nashik":"Maharashtra",
-"Nasik":"Maharashtra",
-"Aurangabad":"Maharashtra",
-"Chhatrapati Sambhajinagar":"Maharashtra",
-"Solapur":"Maharashtra",
-"Sholapur":"Maharashtra",
-"Kolhapur":"Maharashtra",
-"Navi Mumbai":"Maharashtra",
-"Thane":"Maharashtra",
-"Amravati":"Maharashtra",
-"Nanded":"Maharashtra",
-"Sangli":"Maharashtra",
-"Jalgaon":"Maharashtra",
-"Akola":"Maharashtra",
-"Latur":"Maharashtra",
-"Dhule":"Maharashtra",
-"Ahmednagar":"Maharashtra",
-"Ahilyanagar":"Maharashtra",
-"Satara":"Maharashtra",
-"Ratnagiri":"Maharashtra",
-"Panvel":"Maharashtra",
-"Bhiwandi":"Maharashtra",
-"Vasai":"Maharashtra",
-"Virar":"Maharashtra",
-"Ulhasnagar":"Maharashtra",
-"Malegaon":"Maharashtra",
-"Parbhani":"Maharashtra",
-"Beed":"Maharashtra",
-"Chandrapur":"Maharashtra",
-"Yavatmal":"Maharashtra",
-"Ahmedabad":"Gujarat",
-"Surat":"Gujarat",
-"Vadodara":"Gujarat",
-"Baroda":"Gujarat",
-"Rajkot":"Gujarat",
-"Bhavnagar":"Gujarat",
-"Jamnagar":"Gujarat",
-"Gandhinagar":"Gujarat",
-"Anand":"Gujarat",
-"Bharuch":"Gujarat",
-"Junagadh":"Gujarat",
-"Bhuj":"Gujarat",
-"Navsari":"Gujarat",
-"Vapi":"Gujarat",
-"Morbi":"Gujarat",
-"Mehsana":"Gujarat",
-"Palanpur":"Gujarat",
-"Porbandar":"Gujarat",
-"Gandhidham":"Gujarat",
-"Nadiad":"Gujarat",
-"Jaipur":"Rajasthan",
-"Jodhpur":"Rajasthan",
-"Udaipur":"Rajasthan",
-"Kota":"Rajasthan",
-"Ajmer":"Rajasthan",
-"Bikaner":"Rajasthan",
-"Alwar":"Rajasthan",
-"Bharatpur":"Rajasthan",
-"Sikar":"Rajasthan",
-"Sri Ganganagar":"Rajasthan",
-"Pali":"Rajasthan",
-"Bhilwara":"Rajasthan",
-"Chittorgarh":"Rajasthan",
-"Jaisalmer":"Rajasthan",
-"Barmer":"Rajasthan",
-"Kishangarh":"Rajasthan",
-"Bhopal":"Madhya Pradesh",
-"Indore":"Madhya Pradesh",
-"Gwalior":"Madhya Pradesh",
-"Jabalpur":"Madhya Pradesh",
-"Ujjain":"Madhya Pradesh",
-"Sagar":"Madhya Pradesh",
-"Dewas":"Madhya Pradesh",
-"Satna":"Madhya Pradesh",
-"Ratlam":"Madhya Pradesh",
-"Rewa":"Madhya Pradesh",
-"Burhanpur":"Madhya Pradesh",
-"Khandwa":"Madhya Pradesh",
-"Bhind":"Madhya Pradesh",
-"Morena":"Madhya Pradesh",
-"Chhindwara":"Madhya Pradesh",
-"Vidisha":"Madhya Pradesh",
-"Lucknow":"Uttar Pradesh",
-"Kanpur":"Uttar Pradesh",
-"Agra":"Uttar Pradesh",
-"Varanasi":"Uttar Pradesh",
-"Prayagraj":"Uttar Pradesh",
-"Allahabad":"Uttar Pradesh",
-"Ghaziabad":"Uttar Pradesh",
-"Noida":"Uttar Pradesh",
-"Greater Noida":"Uttar Pradesh",
-"Meerut":"Uttar Pradesh",
-"Bareilly":"Uttar Pradesh",
-"Aligarh":"Uttar Pradesh",
-"Moradabad":"Uttar Pradesh",
-"Saharanpur":"Uttar Pradesh",
-"Gorakhpur":"Uttar Pradesh",
-"Ayodhya":"Uttar Pradesh",
-"Mathura":"Uttar Pradesh",
-"Firozabad":"Uttar Pradesh",
-"Jhansi":"Uttar Pradesh",
-"Muzaffarnagar":"Uttar Pradesh",
-"Rampur":"Uttar Pradesh",
-"Hapur":"Uttar Pradesh",
-"Unnao":"Uttar Pradesh",
-"New Delhi":"Delhi",
-"Delhi":"Delhi",
-"Gurugram":"Haryana",
-"Gurgaon":"Haryana",
-"Faridabad":"Haryana",
-"Panipat":"Haryana",
-"Ambala":"Haryana",
-"Hisar":"Haryana",
-"Rohtak":"Haryana",
-"Karnal":"Haryana",
-"Sonipat":"Haryana",
-"Yamunanagar":"Haryana",
-"Panchkula":"Haryana",
-"Bhiwani":"Haryana",
-"Rewari":"Haryana",
-"Chandigarh":"Punjab",
-"Ludhiana":"Punjab",
-"Amritsar":"Punjab",
-"Jalandhar":"Punjab",
-"Patiala":"Punjab",
-"Bathinda":"Punjab",
-"Mohali":"Punjab",
-"Pathankot":"Punjab",
-"Hoshiarpur":"Punjab",
-"Moga":"Punjab",
-"Firozpur":"Punjab",
-"Fazilka":"Punjab",
-"Kolkata":"West Bengal",
-"Howrah":"West Bengal",
-"Durgapur":"West Bengal",
-"Asansol":"West Bengal",
-"Siliguri":"West Bengal",
-"Bardhaman":"West Bengal",
-"Kharagpur":"West Bengal",
-"Darjeeling":"West Bengal",
-"Malda":"West Bengal",
-"Patna":"Bihar",
-"Gaya":"Bihar",
-"Muzaffarpur":"Bihar",
-"Bhagalpur":"Bihar",
-"Darbhanga":"Bihar",
-"Purnia":"Bihar",
-"Arrah":"Bihar",
-"Begusarai":"Bihar",
-"Katihar":"Bihar",
-"Munger":"Bihar",
-"Bhubaneswar":"Odisha",
-"Cuttack":"Odisha",
-"Rourkela":"Odisha",
-"Berhampur":"Odisha",
-"Sambalpur":"Odisha",
-"Puri":"Odisha",
-"Balasore":"Odisha",
-"Baripada":"Odisha",
-"Jharsuguda":"Odisha",
-"Ranchi":"Jharkhand",
-"Jamshedpur":"Jharkhand",
-"Dhanbad":"Jharkhand",
-"Bokaro":"Jharkhand",
-"Deoghar":"Jharkhand",
-"Hazaribagh":"Jharkhand",
-"Raipur":"Chhattisgarh",
-"Raipur City":"Chhattisgarh",
-"Uppunda":"Karnataka",
-"Uppunda Beach":"Karnataka",
-"Byndoor":"Karnataka",
-"Kundapura":"Karnataka",
-"Bhatkal":"Karnataka",
-"Karwar":"Karnataka",
-"Honnavar":"Karnataka",
-"Kumta":"Karnataka",
-"Sirsi":"Karnataka",
-"Gokarna":"Karnataka",
-"Bhilai":"Chhattisgarh",
-"Durg":"Chhattisgarh",
-"Bilaspur":"Chhattisgarh",
-"Korba":"Chhattisgarh",
-"Jagdalpur":"Chhattisgarh",
-"Rajnandgaon":"Chhattisgarh",
-"Guwahati":"Assam",
-"Dibrugarh":"Assam",
-"Silchar":"Assam",
-"Jorhat":"Assam",
-"Tezpur":"Assam",
-"Tinsukia":"Assam",
-"Panaji":"Goa",
-"Panjim":"Goa",
-"Margao":"Goa",
-"Vasco da Gama":"Goa",
-"Mapusa":"Goa",
-"Dehradun":"Uttarakhand",
-"Haridwar":"Uttarakhand",
-"Roorkee":"Uttarakhand",
-"Haldwani":"Uttarakhand",
-"Nainital":"Uttarakhand",
-"Rishikesh":"Uttarakhand",
-"Rudrapur":"Uttarakhand",
-"Shimla":"Himachal Pradesh",
-"Dharamshala":"Himachal Pradesh",
-"Manali":"Himachal Pradesh",
-"Solan":"Himachal Pradesh",
-"Mandi":"Himachal Pradesh",
-"Baddi":"Himachal Pradesh",
-"Srinagar":"Jammu and Kashmir",
-"Jammu":"Jammu and Kashmir",
-"Anantnag":"Jammu and Kashmir",
-"Baramulla":"Jammu and Kashmir",
-"Puducherry":"Puducherry",
-"Pondicherry":"Puducherry",
-"Karaikal":"Puducherry",
-"Kohima":"Nagaland",
-"Dimapur":"Nagaland",
-"Shillong":"Meghalaya",
-"Tura":"Meghalaya",
-"Imphal":"Manipur",
-"Agartala":"Tripura",
-"Itanagar":"Arunachal Pradesh",
-"Naharlagun":"Arunachal Pradesh",
-"Aizawl":"Mizoram",
-"Gangtok":"Sikkim"
+"Chennai":"Tamil Nadu","Coimbatore":"Tamil Nadu","Madurai":"Tamil Nadu","Tiruchirappalli":"Tamil Nadu","Trichy":"Tamil Nadu","Salem":"Tamil Nadu","Tirunelveli":"Tamil Nadu","Thoothukudi":"Tamil Nadu","Tuticorin":"Tamil Nadu","Erode":"Tamil Nadu","Tiruppur":"Tamil Nadu","Vellore":"Tamil Nadu","Thanjavur":"Tamil Nadu","Dindigul":"Tamil Nadu","Karur":"Tamil Nadu","Namakkal":"Tamil Nadu","Sivakasi":"Tamil Nadu","Nagercoil":"Tamil Nadu","Ooty":"Tamil Nadu","Cuddalore":"Tamil Nadu","Kanchipuram":"Tamil Nadu","Bengaluru":"Karnataka","Bangalore":"Karnataka","Mysuru":"Karnataka","Hyderabad":"Telangana","Kochi":"Kerala","Ernakulam":"Kerala","Thiruvananthapuram":"Kerala","Kozhikode":"Kerala","Mumbai":"Maharashtra","Pune":"Maharashtra","Nagpur":"Maharashtra","New Delhi":"Delhi","Delhi":"Delhi","Kolkata":"West Bengal","Ahmedabad":"Gujarat","Surat":"Gujarat","Vadodara":"Gujarat","Jaipur":"Rajasthan","Udaipur":"Rajasthan","Chandigarh":"Chandigarh","Bhopal":"Madhya Pradesh","Indore":"Madhya Pradesh","Lucknow":"Uttar Pradesh","Kanpur":"Uttar Pradesh","Noida":"Uttar Pradesh","Gurugram":"Haryana","Gurgaon":"Haryana","Patna":"Bihar","Bhubaneswar":"Odisha","Visakhapatnam":"Andhra Pradesh","Vijayawada":"Andhra Pradesh","Panaji":"Goa"
 };
 const CITY_NAMES=Object.keys(CITY_STATE);
 function cityMatches(value){
   const q=String(value||'').trim().toLowerCase();
   if(!q)return [];
-  const norm=x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,'');
-  const nq=norm(q);
-  const starts=CITY_NAMES.filter(c=>norm(c).startsWith(nq));
-  const contains=CITY_NAMES.filter(c=>!norm(c).startsWith(nq)&&norm(c).includes(nq));
-  return [...starts,...contains].slice(0,12);
+  const starts=CITY_NAMES.filter(c=>c.toLowerCase().startsWith(q));
+  const contains=CITY_NAMES.filter(c=>!c.toLowerCase().startsWith(q)&&c.toLowerCase().includes(q));
+  return [...starts,...contains].slice(0,10);
 }
 function cityState(value){
-  const norm=x=>String(x||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
-  const q=norm(value);
-  const key=CITY_NAMES.find(c=>norm(c)===q);
+  const q=String(value||'').trim().toLowerCase();
+  const key=CITY_NAMES.find(c=>c.toLowerCase()===q);
   return key ? CITY_STATE[key] : '';
 }
 function renderCitySuggestions(){
@@ -550,7 +228,7 @@ autoCityState();
 }
 function renderCustomers(){
  let q=($('cq')?.value||'').toLowerCase(),a=db.customers.filter(c=>(c.name+' '+c.shop+' '+c.mobile+' '+c.city+' '+c.state).toLowerCase().includes(q));
- $('customers').innerHTML='<h2>Customer CRM</h2><div class="actions"><button class="orange" onclick="openCustomer()">+ New Customer</button><input id="cq" placeholder="Search customer / shop / mobile / city" value="'+esc(q)+'" oninput="renderCustomers()"></div><div class="card tablewrap">'+(a.length?'<table><tr><th>Customer</th><th>Shop</th><th>Mobile</th><th>City</th><th>Orders</th><th>Actions</th></tr>'+a.map(c=>'<tr><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.shop)+'</td><td>'+esc(c.mobile)+'</td><td>'+esc(c.city)+'</td><td>'+db.orders.filter(o=>o.customerId==c.id).length+'</td><td><button class="light" onclick="openCustomer('+c.id+')">Edit</button><button class="green" onclick="openWA('+c.id+')">WA</button><button class="red" onclick="deleteCustomer('+c.id+')">Delete</button></td></tr>').join('')+'</table>':'<div class="empty">No customers found</div>')+'</div>';
+ $('customers').innerHTML='<h2>Customer CRM</h2><div class="actions"><button class="orange" onclick="openCustomer()">+ New Customer</button><button class="no-print" onclick="printCustomers()">🖨️ Print Customers</button><input id="cq" placeholder="Search customer / shop / mobile / city" value="'+esc(q)+'" oninput="renderCustomers()"></div><div class="card tablewrap">'+(a.length?'<table><tr><th>Customer</th><th>Shop</th><th>Mobile</th><th>City</th><th>Orders</th><th class="no-print">Actions</th></tr>'+a.map(c=>'<tr><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.shop)+'</td><td>'+esc(c.mobile)+'</td><td>'+esc(c.city)+'</td><td>'+db.orders.filter(o=>o.customerId==c.id).length+'</td><td class="no-print"><button class="light" onclick="openCustomer('+c.id+')">Edit</button><button class="green" onclick="openWA('+c.id+')">WA</button><button class="red" onclick="deleteCustomer('+c.id+')">Delete</button></td></tr>').join('')+'</table>':'<div class="empty">No customers found</div>')+'</div>';
 }
 function deleteCustomer(id){if(confirm('Delete customer? Their orders will remain in the database.')){db.customers=db.customers.filter(c=>c.id!=id);save();renderAll();toast('Customer deleted')}}
 function openOrder(id){
@@ -582,13 +260,13 @@ function copyOrder(id){
 function renderOrders(){
  let q=($('oq')?.value||'').toLowerCase(),type=$('ofType')?.value||'',st=$('ofStatus')?.value||'';
  let a=db.orders.filter(o=>(o.orderNo+' '+cust(o.customerId).name+' '+cust(o.customerId).shop+' '+cust(o.customerId).mobile+' '+o.status).toLowerCase().includes(q)&&(!type||o.type===type)&&(!st||o.status===st));
- $('orders').innerHTML='<h2>Order Management</h2><div class="actions"><button class="orange" onclick="openOrder()">+ Manual Order</button><input id="oq" placeholder="Search order / customer / shop / mobile" value="'+esc(q)+'" oninput="renderOrders()"><select id="ofType" onchange="renderOrders()"><option value="">All Types</option><option '+(type==='Direct'?'selected':'')+'>Direct</option><option '+(type==='SM'?'selected':'')+'>SM</option></select><select id="ofStatus" onchange="renderOrders()"><option value="">All Status</option>'+STATUS.map(s=>'<option '+(st===s?'selected':'')+'>'+s+'</option>').join('')+'</select></div><div class="card tablewrap">'+(a.length?'<table><tr><th>Order</th><th>Date</th><th>Party</th><th>Type</th><th>Weight</th><th>Status</th><th>Actions</th></tr>'+a.slice().reverse().map(o=>'<tr><td>'+esc(o.orderNo)+'</td><td>'+esc(o.orderDate)+'</td><td>'+esc(cust(o.customerId).name)+'</td><td>'+esc(o.type)+'</td><td>'+fmt(o.weight)+'g</td><td>'+badge(o.status)+'</td><td><button class="light" onclick="openOrder('+o.id+')">Edit</button><button onclick="copyOrder('+o.id+')">Copy</button><button class="green" onclick="openWA('+o.customerId+','+o.id+')">WA</button><button onclick="printOrder('+o.id+')">Print</button><button class="red" onclick="deleteOrder('+o.id+')">Delete</button></td></tr>').join('')+'</table>':'<div class="empty">No orders found</div>')+'</div>';
+ $('orders').innerHTML='<h2>Order Management</h2><div class="actions"><button class="orange" onclick="openOrder()">+ Manual Order</button><button class="no-print" onclick="printOrdersList()">🖨️ Print Orders</button><input id="oq" placeholder="Search order / customer / shop / mobile" value="'+esc(q)+'" oninput="renderOrders()"><select id="ofType" onchange="renderOrders()"><option value="">All Types</option><option '+(type==='Direct'?'selected':'')+'>Direct</option><option '+(type==='SM'?'selected':'')+'>SM</option></select><select id="ofStatus" onchange="renderOrders()"><option value="">All Status</option>'+STATUS.map(s=>'<option '+(st===s?'selected':'')+'>'+s+'</option>').join('')+'</select></div><div class="card tablewrap">'+(a.length?'<table><tr><th>Order</th><th>Date</th><th>Party</th><th>Type</th><th>Weight</th><th>Status</th><th class="no-print">Actions</th></tr>'+a.slice().reverse().map(o=>'<tr><td>'+esc(o.orderNo)+'</td><td>'+esc(o.orderDate)+'</td><td>'+esc(cust(o.customerId).name)+'</td><td>'+esc(o.type)+'</td><td>'+fmt(o.weight)+'g</td><td>'+badge(o.status)+'</td><td class="no-print"><button class="light" onclick="openOrder('+o.id+')">Edit</button><button onclick="copyOrder('+o.id+')">Copy</button><button class="green" onclick="openWA('+o.customerId+','+o.id+')">WA</button><button onclick="printOrder('+o.id+')">Print</button><button class="red" onclick="deleteOrder('+o.id+')">Delete</button></td></tr>').join('')+'</table>':'<div class="empty">No orders found</div>')+'</div>';
 }
 function productionBlock(type){
  let a=db.orders.filter(o=>o.type===type),weight=a.reduce((s,o)=>s+(+o.weight||0),0);
  return '<div class="card"><h3>'+type+' Production</h3><div class="grid">'+STATUS.map(s=>'<div class="tile"><div class="muted">'+s+'</div><div class="kpi">'+a.filter(o=>o.status===s).length+'</div></div>').join('')+'</div><p class="muted">Total weight: '+fmt(weight)+'g</p><div class="tablewrap"><table><tr><th>Order</th><th>Customer</th><th>Weight</th><th>Touch</th><th>Start</th><th>Status</th></tr>'+(a.length?a.slice().reverse().map(o=>'<tr><td>'+esc(o.orderNo)+'</td><td>'+esc(cust(o.customerId).name)+'</td><td>'+fmt(o.weight)+'g</td><td>'+esc(o.touch)+'</td><td>'+esc(o.startDate||'-')+'</td><td><select onchange="setStatus('+o.id+',this.value)">'+STATUS.map(s=>'<option value="'+s+'" '+(o.status===s?'selected':'')+'>'+s+'</option>').join('')+'</select></td></tr>').join(''):'<tr><td colspan="6" class="empty">No orders</td></tr>')+'</table></div></div>';
 }
-function renderProduction(){$('production').innerHTML='<h2>Production</h2>'+productionBlock('Direct')+productionBlock('SM')}
+function renderProduction(){$('production').innerHTML='<h2>Production</h2><div class="actions no-print"><button onclick="printProduction('Direct')">🖨️ Print Direct Production</button><button onclick="printProduction('SM')">🖨️ Print SM Production</button><button class="orange" onclick="printProduction('ALL')">🖨️ Print All Production</button></div>'+productionBlock('Direct')+productionBlock('SM')}
 function reportData(){
  let q=($('rq')?.value||'').toLowerCase(),type=$('rt')?.value||'',statusF=$('rs')?.value||'',from=$('rf')?.value||'',to=$('rto')?.value||'';
  return db.orders.filter(o=>{let c=cust(o.customerId),text=(o.orderNo+' '+c.name+' '+c.shop+' '+c.mobile+' '+c.city+' '+c.state).toLowerCase();return text.includes(q)&&(!type||o.type===type)&&(!statusF||o.status===statusF)&&(!from||o.orderDate>=from)&&(!to||o.orderDate<=to)});
@@ -699,10 +377,22 @@ function printOrder(id){
  let o=ord(id),c=cust(o.customerId),e=db.exhibitions.find(x=>x.id==o.exhibitionId);
  printHtml('Order Slip','<h3>Order '+esc(o.orderNo)+'</h3><p><b>Customer:</b> '+esc(c.name)+'<br><b>Shop:</b> '+esc(c.shop||'-')+'<br><b>Mobile:</b> '+esc(c.mobile)+'<br><b>Address:</b> '+esc(c.address||'-')+'<br><b>Exhibition:</b> '+esc(e?.name||'-')+'<br><b>Date:</b> '+esc(o.orderDate)+'<br><b>Type:</b> '+esc(o.type)+'<br><b>Weight:</b> '+fmt(o.weight)+'g<br><b>Touch:</b> '+esc(o.touch)+'<br><b>Screw:</b> '+esc(o.screw||'-')+'<br><b>Lady Ring:</b> '+esc(o.ladyRing||'-')+'<br><b>Gent Ring:</b> '+esc(o.gentRing||'-')+'<br><b>HUID:</b> '+esc(o.huid)+'<br><b>Advance:</b> ₹'+esc(o.advanceAmount||0)+' ('+esc(o.advanceMode)+')<br><b>Status:</b> '+esc(o.status)+'<br><b>Start:</b> '+esc(o.startDate||'-')+'<br><b>Delivered:</b> '+esc(o.delivered||'-')+'</p><p><b>Notes:</b> '+esc(o.notes||'-')+'</p>');
 }
+function printCustomers(){
+ let a=db.customers.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||''));
+ printHtml('Customer List','<h2>Customer List</h2><p>Total Customers: '+a.length+' | Generated: '+esc(new Date().toLocaleString())+'</p><table><tr><th>#</th><th>Customer</th><th>Shop</th><th>Contact</th><th>Mobile</th><th>City</th><th>State</th><th>Orders</th></tr>'+a.map((c,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(c.name)+'</td><td>'+esc(c.shop||'-')+'</td><td>'+esc(c.contactPerson||'-')+'</td><td>'+esc(c.mobile)+'</td><td>'+esc(c.city||'-')+'</td><td>'+esc(c.state||'-')+'</td><td>'+db.orders.filter(o=>o.customerId==c.id).length+'</td></tr>').join('')+'</table>');
+}
+function printOrdersList(){
+ let a=db.orders.slice().reverse();
+ printHtml('Order List','<h2>Order List</h2><p>Total Orders: '+a.length+' | Total Weight: '+fmt(a.reduce((s,o)=>s+(+o.weight||0),0))+'g | Generated: '+esc(new Date().toLocaleString())+'</p><table><tr><th>#</th><th>Date</th><th>Order</th><th>Customer</th><th>Type</th><th>Weight</th><th>Touch</th><th>Status</th></tr>'+a.map((o,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(o.orderDate)+'</td><td>'+esc(o.orderNo)+'</td><td>'+esc(cust(o.customerId).name)+'</td><td>'+esc(o.type)+'</td><td>'+fmt(o.weight)+'g</td><td>'+esc(o.touch)+'</td><td>'+esc(o.status)+'</td></tr>').join('')+'</table>');
+}
+function printProduction(type){
+ let a=db.orders.filter(o=>type==='ALL'||o.type===type).slice().reverse(),label=type==='ALL'?'All Production':type+' Production';
+ printHtml(label,'<h2>'+esc(label)+'</h2><p>Total Orders: '+a.length+' | Total Weight: '+fmt(a.reduce((s,o)=>s+(+o.weight||0),0))+'g | Generated: '+esc(new Date().toLocaleString())+'</p><table><tr><th>#</th><th>Order</th><th>Customer</th><th>Type</th><th>Weight</th><th>Touch</th><th>Start Date</th><th>Status</th></tr>'+a.map((o,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(o.orderNo)+'</td><td>'+esc(cust(o.customerId).name)+'</td><td>'+esc(o.type)+'</td><td>'+fmt(o.weight)+'g</td><td>'+esc(o.touch)+'</td><td>'+esc(o.startDate||'-')+'</td><td>'+esc(o.status)+'</td></tr>').join('')+'</table>');
+}
 function renderPrint(){
  let opts=db.orders.slice().reverse().map(o=>'<option value="'+o.id+'">'+esc(o.orderNo)+' — '+esc(cust(o.customerId).name)+'</option>').join('');
  if(!opts)opts='<option value="">No orders</option>';
- $('print').innerHTML='<h2>Print Center</h2><div class="card"><label>Order</label><select id="po">'+opts+'</select><div class="actions"><button class="orange" onclick="printOrder(document.getElementById(\'po\').value)">Print Order</button><button onclick="printReport()">Print Filtered Report</button></div></div><div class="tiles"><div class="tile"><h3>Order Print</h3><p>Print a complete order slip with customer, weight, touch, HUID, advance and status details.</p></div><div class="tile"><h3>Reports</h3><p>Use Database Reports to filter and print order reports.</p></div><div class="tile"><h3>Exhibition</h3><p>Each exhibition has its own printable report.</p></div></div>';
+ $('print').innerHTML='<h2>Print Center</h2><div class="card"><h3>Individual Order Slip</h3><label>Order</label><select id="po">'+opts+'</select><div class="actions"><button class="orange" onclick="printOrder(document.getElementById(\'po\').value)">🧾 Print Order Slip</button></div></div><div class="card"><h3>Lists & Reports</h3><div class="actions"><button onclick="printCustomers()">🖨️ Customer List</button><button onclick="printOrdersList()">🖨️ Order List</button><button onclick="printProduction(\'Direct\')">🖨️ Direct Production</button><button onclick="printProduction(\'SM\')">🖨️ SM Production</button><button class="orange" onclick="printProduction(\'ALL\')">🖨️ All Production</button><button onclick="printReport()">📊 Filtered Report</button></div></div><div class="tiles"><div class="tile"><h3>Professional A4 Print</h3><p>Clean print layout without navigation, buttons or editing controls.</p></div><div class="tile"><h3>Order Slip</h3><p>Customer, address, weight, touch, screw, HUID, advance and status details.</p></div><div class="tile"><h3>Exhibition</h3><p>Use the exhibition report print option for exhibition-wise order details.</p></div></div>';
 }
 function printReport(){let a=reportData();printHtml('Database Report','<h2>Database Report</h2><p>Generated: '+new Date().toLocaleString()+'</p><table><tr><th>Date</th><th>Order</th><th>Customer</th><th>Type</th><th>Weight</th><th>Status</th></tr>'+a.map(o=>'<tr><td>'+esc(o.orderDate)+'</td><td>'+esc(o.orderNo)+'</td><td>'+esc(cust(o.customerId).name)+'</td><td>'+esc(o.type)+'</td><td>'+fmt(o.weight)+'g</td><td>'+esc(o.status)+'</td></tr>').join('')+'</table>')}
 function exportCSV(a=db.orders){
@@ -788,6 +478,15 @@ let deferredInstall=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;});
 async function installApp(){if(deferredInstall){deferredInstall.prompt();deferredInstall=null;}else{toast('Chrome menu → Add to Home screen / Install app');}}
 document.addEventListener('click',e=>{if(!e.target.closest('.city-field')){const b=$('citySuggestions');if(b){b.style.display='none';}}if(!e.target.closest('#scannerCitySuggestions')&&!e.target.closest('#sc')){const b=$('scannerCitySuggestions');if(b){b.style.display='none';}}});
+function printCurrentPage(){
+ const active=document.querySelector('section.active');
+ if(!active)return toast('No page selected');
+ const oldTitle=document.title;
+ const heading=active.querySelector('h2,h1');
+ document.title=(heading?.textContent||'SHREE JI CONNECT')+' - Print';
+ window.print();
+ setTimeout(()=>{document.title=oldTitle},500);
+}
 function renderAll(){
  $('brand').textContent=db.settings.company||'SHREE JI CONNECT';
  $('subtitle').textContent=db.settings.subtitle||'Business CRM';

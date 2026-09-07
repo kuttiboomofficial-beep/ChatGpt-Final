@@ -321,9 +321,9 @@ function renderWhatsApp(){
  '<div class="card"><h3>Bulk WhatsApp</h3><p class="muted">Select up to 25 customers. WhatsApp opens one customer at a time so you can review and send safely.</p>'+ 
  '<div class="bulk-toolbar"><div><label>Message Template</label><select id="bt">'+db.templates.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('')+'</select></div>'+ 
  '<div><label>Search Customer / Jewellery / Mobile / City</label><input id="bq" placeholder="Type to search..." value="'+esc($('bq')?.value||'')+'" oninput="renderBulkList()"></div></div>'+ 
- '<div class="actions"><button class="orange" onclick="selectBulk(true)">✓ Select All (max 25)</button><button class="light" onclick="selectBulk(false)">Clear All</button><button class="green" onclick="nextBulk()">Open Next WhatsApp</button></div>'+ 
+ '<div class="actions"><button class="orange" onclick="selectBulk(true)">✓ Select All (max 25)</button><button class="light" onclick="selectBulk(false)">Clear All</button><button class="green" onclick="nextBulk()">📤 Send WhatsApp</button><button onclick="nextBulk()">Open Next WhatsApp</button></div>'+ 
  '<div id="bc" class="bulk-count"></div><div id="bselected" class="bulk-selected"></div><div id="bl"></div></div>'+ 
- '<div class="card"><h3>Image Sending</h3><p class="muted">Choose an image and open WhatsApp. Final sending is confirmed in WhatsApp.</p><input type="file" accept="image/*" id="waImage" onchange="previewWAImage(event)"><div id="imagePreview"></div></div>';
+ '<div class="card"><h3>Image Sending</h3><p class="muted">Choose an image, then send it manually in WhatsApp after the chat opens.</p><input type="file" accept="image/*" id="waImage" onchange="previewWAImage(event)"><div id="imagePreview"></div><div class="actions"><button class="green" onclick="sendBulkImage()">📤 Send Image via WhatsApp</button></div></div>';
  renderBulkList();
 }
 function renderBulkList(){
@@ -355,6 +355,17 @@ function nextBulk(){
  localStorage.setItem('sjc_bulk_index',String(i+1));
  window.open('https://wa.me/'+n+'?text='+encodeURIComponent(applyTemplate(t,c,o,ex)),'_blank');
  toast('Opened '+c.name+' ('+(i+1)+'/'+ids.length+')');
+}
+function sendBulkImage(){
+ let ids=[...bulkSel],i=+(localStorage.getItem('sjc_bulk_index')||0);
+ if(!ids.length)return toast('Select customers first');
+ if(i>=ids.length)i=0;
+ let c=cust(ids[i]),n=(c.mobile||'').replace(/\D/g,'');
+ if(n.length===10)n=(db.settings.country||'91')+n;
+ if(n.length<10)return toast('Mobile missing: '+c.name);
+ localStorage.setItem('sjc_bulk_index',String(i+1));
+ window.open('https://wa.me/'+n,'_blank');
+ toast('WhatsApp opened for '+c.name+' — attach the selected image and send');
 }
 function previewWAImage(e){
  let f=e.target.files[0];if(!f)return;

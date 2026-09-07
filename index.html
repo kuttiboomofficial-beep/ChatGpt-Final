@@ -321,7 +321,7 @@ function renderWhatsApp(){
  '<div class="card"><h3>Bulk WhatsApp</h3><p class="muted">Select up to 25 customers. WhatsApp opens one customer at a time so you can review and send safely.</p>'+ 
  '<div class="bulk-toolbar"><div><label>Message Template</label><select id="bt">'+db.templates.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('')+'</select></div>'+ 
  '<div><label>Search Customer / Jewellery / Mobile / City</label><input id="bq" placeholder="Type to search..." value="'+esc($('bq')?.value||'')+'" oninput="renderBulkList()"></div></div>'+ 
- '<div class="actions"><button class="orange" onclick="selectBulk(true)">✓ Select All (max 25)</button><button class="light" onclick="selectBulk(false)">Clear All</button><button class="green" onclick="nextBulk()">📤 Send WhatsApp</button><button onclick="nextBulk()">Open Next WhatsApp</button></div>'+ 
+ '<div class="actions"><button class="orange" onclick="selectBulk(true)">✓ Select All (max 25)</button><button class="light" onclick="selectBulk(false)">Clear All</button><button class="green" onclick="startBulk()">🚀 Start Bulk WhatsApp</button><button onclick="nextBulk()">➡️ Next Customer</button></div><div id="bulkProgress" class="bulk-progress"></div>'+ 
  '<div id="bc" class="bulk-count"></div><div id="bselected" class="bulk-selected"></div><div id="bl"></div></div>'+ 
  '<div class="card"><h3>Image Sending</h3><p class="muted">Choose an image, then send it manually in WhatsApp after the chat opens.</p><input type="file" accept="image/*" id="waImage" onchange="previewWAImage(event)"><div id="imagePreview"></div><div class="actions"><button class="green" onclick="sendBulkImage()">📤 Send Image via WhatsApp</button></div></div>';
  renderBulkList();
@@ -345,6 +345,16 @@ function selectBulk(on){
  let a=db.customers.filter(c=>(c.name+' '+c.shop+' '+c.mobile+' '+c.city+' '+c.state).toLowerCase().includes(q));
  bulkSel=new Set(a.slice(0,25).map(c=>String(c.id)));localStorage.removeItem('sjc_bulk_index');renderBulkList();
 }
+function startBulk(){
+ localStorage.setItem('sjc_bulk_index','0');
+ if(!bulkSel.size)return toast('Select customers first');
+ updateBulkProgress();
+ nextBulk();
+}
+function updateBulkProgress(){
+ let ids=[...bulkSel],i=+(localStorage.getItem('sjc_bulk_index')||0);
+ if($('bulkProgress'))$('bulkProgress').innerHTML=ids.length?('Bulk progress: <b>'+Math.min(i,ids.length)+' / '+ids.length+'</b> opened'):'Select customers to start bulk sending.';
+}
 function nextBulk(){
  let ids=[...bulkSel],i=+(localStorage.getItem('sjc_bulk_index')||0);
  if(!ids.length)return toast('Select customers first');
@@ -355,6 +365,7 @@ function nextBulk(){
  localStorage.setItem('sjc_bulk_index',String(i+1));
  window.open('https://wa.me/'+n+'?text='+encodeURIComponent(applyTemplate(t,c,o,ex)),'_blank');
  toast('Opened '+c.name+' ('+(i+1)+'/'+ids.length+')');
+ updateBulkProgress();
 }
 function sendBulkImage(){
  let ids=[...bulkSel],i=+(localStorage.getItem('sjc_bulk_index')||0);

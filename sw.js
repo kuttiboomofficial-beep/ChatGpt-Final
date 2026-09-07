@@ -1,4 +1,4 @@
-const CACHE = "shree-ji-connect-v72";
+const CACHE = "shree-ji-connect-v7-1";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", event => {

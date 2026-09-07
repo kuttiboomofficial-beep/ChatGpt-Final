@@ -48,6 +48,18 @@ td button{margin:2px;padding:8px 10px;font-size:13px}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 18px;border-radius:24px;display:none;z-index:100}
 .preview{max-width:100%;max-height:220px;border-radius:12px;border:1px solid #ddd}
 .small{font-size:12px}.danger-note{background:#fff3cd;border-radius:10px;padding:10px;color:#856404}
+
+.bulk-toolbar{display:grid;grid-template-columns:1.2fr 1fr;gap:12px;align-items:end}
+.bulk-list{border:1px solid #ddd;border-radius:14px;overflow:hidden;margin-top:14px}
+.bulk-head,.bulk-row{display:grid;grid-template-columns:48px minmax(180px,1.2fr) minmax(160px,1fr) minmax(120px,.8fr) minmax(110px,.7fr);gap:10px;align-items:center;padding:12px 14px}
+.bulk-head{background:#f6f6f6;font-size:13px;font-weight:800}
+.bulk-row{border-top:1px solid #eee;background:#fff}
+.bulk-row:hover{background:#fafafa}
+.bulk-row input[type=checkbox]{width:18px;height:18px}
+.bulk-name{font-weight:800}.bulk-contact{font-weight:700}.bulk-mobile{font-size:14px}.bulk-city{color:#555;font-size:14px}
+.bulk-count{font-size:15px;font-weight:800}.bulk-limit{font-size:13px;color:#777}
+.bulk-selected{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.bulk-chip{background:#f1f1f1;border-radius:18px;padding:7px 10px;font-size:12px;font-weight:700}
+@media(max-width:700px){.bulk-toolbar{grid-template-columns:1fr}.bulk-head{display:none}.bulk-row{grid-template-columns:36px 1fr 1fr;gap:7px}.bulk-row>div:nth-child(4),.bulk-row>div:nth-child(5){display:none}}
 @media(max-width:1000px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.quick{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:650px){
  header{padding:15px 18px}#brand{font-size:21px}
@@ -305,19 +317,34 @@ function sendWA(){
 async function copyWAModal(){try{await navigator.clipboard.writeText($('wam').value);toast('Message copied')}catch(e){toast('Copy unavailable')}}
 function renderWhatsApp(){
  $('whatsapp').innerHTML='<h2>WhatsApp Center</h2>'+
- '<div class="card"><h3>Individual WhatsApp</h3><p class="muted">Select a customer, choose a template, review the message and open WhatsApp.</p><button class="green" onclick="openWA(db.customers[0]?.id)">Open Individual WhatsApp</button></div>'+
- '<div class="card"><h3>Bulk WhatsApp — Maximum 25</h3><div class="formgrid"><div><label>Template</label><select id="bt">'+db.templates.map(t=>'<option value="'+t.id+'">'+esc(t.name)+'</option>').join('')+'</select></div><div><label>Search</label><input id="bq" placeholder="Search customer" oninput="renderBulkList()"></div></div><div class="actions"><button class="orange" onclick="selectBulk(true)">Select All (max 25)</button><button class="light" onclick="selectBulk(false)">Clear All</button><button class="green" onclick="nextBulk()">Open Next WhatsApp</button></div><p id="bc" class="muted"></p><div id="bl"></div></div>'+
+ '<div class="card"><h3>Individual WhatsApp</h3><p class="muted">Select one customer, choose a template, review the message and open WhatsApp.</p><button class="green" onclick="openWA(db.customers[0]?.id)">Open Individual WhatsApp</button></div>'+
+ '<div class="card"><h3>Bulk WhatsApp</h3><p class="muted">Select up to 25 customers. WhatsApp opens one customer at a time so you can review and send safely.</p>'+ 
+ '<div class="bulk-toolbar"><div><label>Message Template</label><select id="bt">'+db.templates.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('')+'</select></div>'+ 
+ '<div><label>Search Customer / Jewellery / Mobile / City</label><input id="bq" placeholder="Type to search..." value="'+esc($('bq')?.value||'')+'" oninput="renderBulkList()"></div></div>'+ 
+ '<div class="actions"><button class="orange" onclick="selectBulk(true)">✓ Select All (max 25)</button><button class="light" onclick="selectBulk(false)">Clear All</button><button class="green" onclick="nextBulk()">Open Next WhatsApp</button></div>'+ 
+ '<div id="bc" class="bulk-count"></div><div id="bselected" class="bulk-selected"></div><div id="bl"></div></div>'+ 
  '<div class="card"><h3>Image Sending</h3><p class="muted">Choose an image and open WhatsApp. Final sending is confirmed in WhatsApp.</p><input type="file" accept="image/*" id="waImage" onchange="previewWAImage(event)"><div id="imagePreview"></div></div>';
  renderBulkList();
 }
 function renderBulkList(){
- let q=($('bq')?.value||'').toLowerCase(),a=db.customers.filter(c=>(c.name+' '+c.shop+' '+c.mobile+' '+c.city).toLowerCase().includes(q));
+ let q=($('bq')?.value||'').toLowerCase().trim();
+ let a=db.customers.filter(c=>(c.name+' '+c.shop+' '+c.mobile+' '+c.city+' '+c.state).toLowerCase().includes(q));
  if(!$('bc')||!$('bl'))return;
- $('bc').textContent=bulkSel.size+' / 25 selected';
- $('bl').innerHTML=a.map(c=>'<label style="display:flex;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #eee"><input type="checkbox" '+(bulkSel.has(String(c.id))?'checked':'')+' onchange="toggleBulk('+c.id+',this.checked)"><span><b>'+esc(c.name)+'</b><br><span class="muted">'+esc(c.mobile)+(c.city?' · '+esc(c.city):'')+'</span></span></label>').join('')||'<div class="empty">No customers</div>';
+ $('bc').innerHTML=bulkSel.size+' selected <span class="bulk-limit">/ 25 maximum</span>';
+ $('bselected').innerHTML=[...bulkSel].map(id=>{let c=cust(id);return '<span class="bulk-chip">'+esc(c.shop||'Jewellery')+' — '+esc(c.name)+'</span>'}).join('');
+ $('bl').innerHTML=a.length?'<div class="bulk-list"><div class="bulk-head"><div></div><div>Jewellery Name</div><div>Contact Person</div><div>📱 Mobile</div><div>City / State</div></div>'+a.map(c=>'<label class="bulk-row"><div><input type="checkbox" '+(bulkSel.has(String(c.id))?'checked':'')+' onchange="toggleBulk('+c.id+',this.checked)"></div><div class="bulk-name">'+esc(c.shop||'-')+'</div><div class="bulk-contact">'+esc(c.name||'-')+'</div><div class="bulk-mobile">📱 '+esc(c.mobile||'-')+'</div><div class="bulk-city">'+esc(c.city||'-')+(c.state?' · '+esc(c.state):'')+'</div></label>').join('')+'</div>':'<div class="empty">No customers found</div>';
 }
-function toggleBulk(id,on){if(on){if(bulkSel.size>=25)return toast('Maximum 25 customers');bulkSel.add(String(id))}else bulkSel.delete(String(id));renderBulkList()}
-function selectBulk(on){bulkSel=on?new Set(db.customers.slice(0,25).map(c=>String(c.id))):new Set();renderBulkList()}
+function toggleBulk(id,on){
+ if(on){if(bulkSel.size>=25&&!bulkSel.has(String(id)))return toast('Maximum 25 customers');bulkSel.add(String(id))}
+ else bulkSel.delete(String(id));
+ renderBulkList();
+}
+function selectBulk(on){
+ if(!on){bulkSel=new Set();localStorage.removeItem('sjc_bulk_index');renderBulkList();return}
+ let q=($('bq')?.value||'').toLowerCase().trim();
+ let a=db.customers.filter(c=>(c.name+' '+c.shop+' '+c.mobile+' '+c.city+' '+c.state).toLowerCase().includes(q));
+ bulkSel=new Set(a.slice(0,25).map(c=>String(c.id)));localStorage.removeItem('sjc_bulk_index');renderBulkList();
+}
 function nextBulk(){
  let ids=[...bulkSel],i=+(localStorage.getItem('sjc_bulk_index')||0);
  if(!ids.length)return toast('Select customers first');
@@ -327,7 +354,7 @@ function nextBulk(){
  if(n.length<10)return toast('Mobile missing: '+c.name);
  localStorage.setItem('sjc_bulk_index',String(i+1));
  window.open('https://wa.me/'+n+'?text='+encodeURIComponent(applyTemplate(t,c,o,ex)),'_blank');
- toast('Opened '+c.name);
+ toast('Opened '+c.name+' ('+(i+1)+'/'+ids.length+')');
 }
 function previewWAImage(e){
  let f=e.target.files[0];if(!f)return;

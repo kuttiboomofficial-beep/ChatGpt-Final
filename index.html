@@ -143,6 +143,17 @@ const defaults={
  ]
 };
 let db=load(),current='dashboard',scanFile=null,bulkSel=new Set();
+// Exhibition-wise manual New/Existing classification. Existing customer IDs are chosen by the user.
+(function initExpoCustomerTypes(){
+ db.exhibitions.forEach(e=>{
+  if(!Array.isArray(e.existingCustomerIds)){
+   const start=e.start||'';
+   const expoIds=[...new Set(db.orders.filter(o=>String(o.exhibitionId)===String(e.id)).map(o=>String(o.customerId)))];
+   e.existingCustomerIds=expoIds.filter(cid=>db.orders.some(o=>String(o.customerId)===cid && String(o.exhibitionId)!==String(e.id) && (!start || !o.orderDate || o.orderDate<start)));
+  }
+ });
+ save();
+})();
 
 function $(id){return document.getElementById(id)}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -457,21 +468,35 @@ function delExhibition(id){
  }
 }
 function exhibitionCustomerType(exhibitionId,customerId){
- let e=db.exhibitions.find(x=>x.id==exhibitionId), start=e?.start||'';
- let prior=db.orders.some(o=>String(o.customerId)===String(customerId) && String(o.exhibitionId)!==String(exhibitionId) && (!start || !o.orderDate || o.orderDate<start));
- return prior?'Existing':'New';
+ let e=db.exhibitions.find(x=>String(x.id)===String(exhibitionId));
+ let ids=Array.isArray(e?.existingCustomerIds)?e.existingCustomerIds.map(String):[];
+ return ids.includes(String(customerId))?'Existing':'New';
+}
+function toggleExpoExisting(exhibitionId,customerId,checked){
+ let e=db.exhibitions.find(x=>String(x.id)===String(exhibitionId));
+ if(!e)return;
+ e.existingCustomerIds=Array.isArray(e.existingCustomerIds)?e.existingCustomerIds.map(String):[];
+ const cid=String(customerId);
+ if(checked){if(!e.existingCustomerIds.includes(cid))e.existingCustomerIds.push(cid)}
+ else e.existingCustomerIds=e.existingCustomerIds.filter(x=>x!==cid);
+ save();
+ exhibitionReport(exhibitionId);
+ toast(checked?'Marked as Existing Customer':'Marked as New Customer');
 }
 function exhibitionReport(id){
  let e=db.exhibitions.find(x=>x.id==id),a=db.orders.filter(o=>o.exhibitionId==id),w=a.reduce((s,o)=>s+(+o.weight||0),0);
- let ids=[...new Set(a.map(o=>o.customerId))];
+ if(!e)return;
+ if(!Array.isArray(e.existingCustomerIds))e.existingCustomerIds=[];
+ let ids=[...new Set(a.map(o=>String(o.customerId)))];
  let newIds=ids.filter(cid=>exhibitionCustomerType(id,cid)==='New'), oldIds=ids.filter(cid=>exhibitionCustomerType(id,cid)==='Existing');
  let rows=ids.map((cid,i)=>{let c=cust(cid),ca=a.filter(o=>String(o.customerId)===String(cid)),types=[...new Set(ca.map(o=>o.type))].join(' / '),cw=ca.reduce((s,o)=>s+(+o.weight||0),0),ct=exhibitionCustomerType(id,cid);return '<tr><td>'+(i+1)+'</td><td><b>'+esc(c.shop||'-')+'</b></td><td>'+esc(c.name||'-')+'</td><td>'+esc(c.mobile||'-')+'</td><td>'+esc(ct==='New'?'🆕 New Customer':'🔁 Existing Customer')+'</td><td>'+esc(types||'-')+'</td><td>'+fmt(cw)+' g</td></tr>';}).join('');
  let newList=newIds.map((cid,i)=>{let c=cust(cid);return '<tr><td>'+(i+1)+'</td><td><b>'+esc(c.shop||'-')+'</b></td><td>'+esc(c.name||'-')+'</td><td>'+esc(c.mobile||'-')+'</td><td>'+esc(c.city||'-')+'</td><td>'+esc(c.state||'-')+'</td></tr>';}).join('');
  let oldList=oldIds.map((cid,i)=>{let c=cust(cid);return '<tr><td>'+(i+1)+'</td><td><b>'+esc(c.shop||'-')+'</b></td><td>'+esc(c.name||'-')+'</td><td>'+esc(c.mobile||'-')+'</td><td>'+esc(c.city||'-')+'</td><td>'+esc(c.state||'-')+'</td></tr>';}).join('');
- modal('Exhibition Report','<h3>'+esc(e.name)+'</h3><p>'+esc(e.location)+' · '+esc(e.start)+' → '+esc(e.end)+' · Stall: '+esc(e.stall||'-')+'</p><div class="grid"><div class="card">Total Customers<div class="kpi">'+ids.length+'</div></div><div class="card">🆕 New Customers<div class="kpi">'+newIds.length+'</div></div><div class="card">🔁 Existing Customers<div class="kpi">'+oldIds.length+'</div></div><div class="card">Orders<div class="kpi">'+a.length+'</div></div><div class="card">Weight<div class="kpi">'+fmt(w)+' g</div></div><div class="card">Direct / SM<div class="kpi">'+a.filter(o=>o.type==='Direct').length+' / '+a.filter(o=>o.type==='SM').length+'</div></div></div><div class="card tablewrap"><h3>🆕 New Customers — This Expo</h3><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th></tr>'+(newList||'<tr><td colspan="6" class="empty">No new customers</td></tr>')+'</table></div><div class="card tablewrap"><h3>🔁 Existing Customers — This Expo</h3><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th></tr>'+(oldList||'<tr><td colspan="6" class="empty">No existing customers</td></tr>')+'</table></div><div class="card tablewrap"><h3>All Expo Customers — Direct / SM & Weight</h3><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>Customer Type</th><th>Direct / SM</th><th>Weight</th></tr>'+(rows||'<tr><td colspan="7" class="empty">No customers</td></tr>')+'</table></div><div class="actions"><button onclick="printExhibition('+id+')">Print Exhibition Report</button></div>');
+ let chooser=ids.map(cid=>{let c=cust(cid),checked=oldIds.includes(cid)?'checked':'';return '<label style="display:flex;gap:10px;align-items:center;padding:11px 12px;border-bottom:1px solid #eee;cursor:pointer"><input type="checkbox" '+checked+' onchange="toggleExpoExisting('+id+',\''+esc(cid)+'\',this.checked)"><span><b>'+esc(c.shop||'-')+'</b> — '+esc(c.name||'-')+' · 📱 '+esc(c.mobile||'-')+'</span></label>';}).join('');
+ modal('Exhibition Report','<h3>'+esc(e.name)+'</h3><p>'+esc(e.location)+' · '+esc(e.start)+' → '+esc(e.end)+' · Stall: '+esc(e.stall||'-')+'</p><div class="card"><h3>👤 Choose Existing Customers for This Expo</h3><p class="muted">Already நம்மகிட்ட வாங்கிய party-யை நீங்க இங்கே manually tick பண்ணுங்க. Tick செய்தவர்கள் <b>Existing</b>; மற்றவர்கள் <b>New</b>.</p><div style="border:1px solid #ddd;border-radius:10px;overflow:hidden">'+(chooser||'<div class="empty">No customers/orders in this exhibition yet</div>')+'</div></div><div class="grid"><div class="card">Total Customers<div class="kpi">'+ids.length+'</div></div><div class="card">🆕 New Customers<div class="kpi">'+newIds.length+'</div></div><div class="card">🔁 Existing Customers<div class="kpi">'+oldIds.length+'</div></div><div class="card">Orders<div class="kpi">'+a.length+'</div></div><div class="card">Weight<div class="kpi">'+fmt(w)+' g</div></div><div class="card">Direct / SM<div class="kpi">'+a.filter(o=>o.type==='Direct').length+' / '+a.filter(o=>o.type==='SM').length+'</div></div></div><div class="card tablewrap"><h3>🆕 New Customers — This Expo</h3><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th></tr>'+(newList||'<tr><td colspan="6" class="empty">No new customers</td></tr>')+'</table></div><div class="card tablewrap"><h3>🔁 Existing Customers — This Expo</h3><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th></tr>'+(oldList||'<tr><td colspan="6" class="empty">No existing customers</td></tr>')+'</table></div><div class="card tablewrap"><h3>All Expo Customers — Direct / SM & Weight</h3><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>Customer Type</th><th>Direct / SM</th><th>Weight</th></tr>'+(rows||'<tr><td colspan="7" class="empty">No customers</td></tr>')+'</table></div><div class="actions"><button onclick="printExhibition('+id+')">Print Exhibition Report</button></div>');
 }
 function printExhibition(id){
- let e=db.exhibitions.find(x=>x.id==id),a=db.orders.filter(o=>o.exhibitionId==id),ids=[...new Set(a.map(o=>o.customerId))];
+ let e=db.exhibitions.find(x=>x.id==id),a=db.orders.filter(o=>o.exhibitionId==id),ids=[...new Set(a.map(o=>String(o.customerId)))];
  let nw=ids.filter(cid=>exhibitionCustomerType(id,cid)==='New'),ex=ids.filter(cid=>exhibitionCustomerType(id,cid)==='Existing');
  let rows=ids.map((cid,i)=>{let c=cust(cid),ca=a.filter(o=>String(o.customerId)===String(cid)),types=[...new Set(ca.map(o=>o.type))].join(' / '),w=ca.reduce((s,o)=>s+(+o.weight||0),0);return '<tr><td>'+(i+1)+'</td><td>'+esc(c.shop||'-')+'</td><td>'+esc(c.name||'-')+'</td><td>'+esc(c.mobile||'-')+'</td><td>'+esc(exhibitionCustomerType(id,cid))+'</td><td>'+esc(types||'-')+'</td><td>'+fmt(w)+' g</td></tr>';}).join('');
  printHtml('Exhibition Report','<h2>'+esc(e.name)+'</h2><p>'+esc(e.location)+' | '+esc(e.start)+' → '+esc(e.end)+' | Stall: '+esc(e.stall||'-')+'</p><p><b>Total Customers:</b> '+ids.length+' &nbsp; <b>New:</b> '+nw.length+' &nbsp; <b>Existing:</b> '+ex.length+' &nbsp; <b>Direct / SM:</b> '+a.filter(o=>o.type==='Direct').length+' / '+a.filter(o=>o.type==='SM').length+' &nbsp; <b>Total Weight:</b> '+fmt(a.reduce((s,o)=>s+(+o.weight||0),0))+' g</p><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>Customer Type</th><th>Direct / SM</th><th>Weight</th></tr>'+rows+'</table>');

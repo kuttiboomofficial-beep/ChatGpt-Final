@@ -95,6 +95,8 @@ td button{margin:2px;padding:8px 10px;font-size:13px}
 .city-field{position:relative}.city-suggestions{display:none;position:absolute;left:0;right:0;top:100%;z-index:100;background:#fff;border:1px solid #d5d5d5;border-radius:10px;box-shadow:0 8px 22px #0002;overflow:hidden;margin-top:4px}.city-option{width:100%;border:0;border-radius:0;background:#fff;color:#222;text-align:left;padding:11px 13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}.city-option:hover,.city-option:focus{background:#f6f6f6}.city-option span{color:#777;font-size:13px;margin-left:12px}
 .print-only{display:none}.customer-type-select{min-width:170px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;background:#fff;font-weight:700}
 @media print{.no-print{display:none!important}.print-only{display:inline!important}}
+
+.compact-expo-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.expo-kpi{border:1px solid #ddd;text-align:left;cursor:pointer;min-height:108px;padding:14px}.expo-kpi:hover{transform:translateY(-1px)}.expo-kpi .kpi{font-size:26px;margin:5px 0}.report-head{margin-bottom:10px}.report-head h3{margin:0 0 4px}@media(max-width:800px){.compact-expo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -492,24 +494,80 @@ function toggleExpoExisting(exhibitionId,customerId,checked){
  exhibitionReport(exhibitionId);
  toast(checked?'Marked as Existing Customer':'Marked as New Customer');
 }
+function expoData(id){
+ let e=db.exhibitions.find(x=>x.id==id);
+ let a=db.orders.filter(o=>String(o.exhibitionId)===String(id));
+ let ids=[...new Set(a.map(o=>String(o.customerId)))];
+ let existing=ids.filter(cid=>exhibitionCustomerType(id,cid)==='Existing');
+ let newer=ids.filter(cid=>exhibitionCustomerType(id,cid)==='New');
+ let direct=ids.filter(cid=>a.some(o=>String(o.customerId)===cid && o.type==='Direct'));
+ let sm=ids.filter(cid=>a.some(o=>String(o.customerId)===cid && o.type==='SM'));
+ let directNew=direct.filter(cid=>exhibitionCustomerType(id,cid)==='New');
+ let directExisting=direct.filter(cid=>exhibitionCustomerType(id,cid)==='Existing');
+ let smNew=sm.filter(cid=>exhibitionCustomerType(id,cid)==='New');
+ let smExisting=sm.filter(cid=>exhibitionCustomerType(id,cid)==='Existing');
+ let directWeight=a.filter(o=>o.type==='Direct').reduce((s,o)=>s+(+o.weight||0),0);
+ let smWeight=a.filter(o=>o.type==='SM').reduce((s,o)=>s+(+o.weight||0),0);
+ let totalWeight=directWeight+smWeight;
+ return {e,a,ids,existing,newer,direct,sm,directNew,directExisting,smNew,smExisting,directWeight,smWeight,totalWeight};
+}
+function expoRows(id,kind){
+ let d=expoData(id), ids=d.ids;
+ if(kind==='direct')ids=d.direct;
+ else if(kind==='sm')ids=d.sm;
+ else if(kind==='new')ids=d.newer;
+ else if(kind==='existing')ids=d.existing;
+ else if(kind==='directNew')ids=d.directNew;
+ else if(kind==='directExisting')ids=d.directExisting;
+ else if(kind==='smNew')ids=d.smNew;
+ else if(kind==='smExisting')ids=d.smExisting;
+ return ids.map((cid,i)=>{
+   let c=cust(cid),ca=d.a.filter(o=>String(o.customerId)===cid);
+   if(kind==='direct'||kind==='directNew'||kind==='directExisting')ca=ca.filter(o=>o.type==='Direct');
+   if(kind==='sm'||kind==='smNew'||kind==='smExisting')ca=ca.filter(o=>o.type==='SM');
+   let types=[...new Set(ca.map(o=>o.type))].join(' / '),w=ca.reduce((s,o)=>s+(+o.weight||0),0);
+   return '<tr><td>'+(i+1)+'</td><td><b>'+esc(c.shop||'-')+'</b></td><td>'+esc(c.name||'-')+'</td><td>'+esc(c.mobile||'-')+'</td><td>'+esc(c.city||'-')+'</td><td>'+esc(c.state||'-')+'</td><td>'+esc(exhibitionCustomerType(id,cid))+'</td><td>'+esc(types||'-')+'</td><td>'+fmt(w)+' g</td></tr>';
+ }).join('');
+}
+function expoDetail(id,kind,title){
+ let d=expoData(id),e=d.e;
+ let map={total:d.ids.length,direct:d.direct.length,sm:d.sm.length,directNew:d.directNew.length,directExisting:d.directExisting.length,smNew:d.smNew.length,smExisting:d.smExisting.length,new:d.newer.length,existing:d.existing.length};
+ let count=map[kind]??0;
+ let label=title||'Customer Details';
+ let rows=expoRows(id,kind);
+ let empty=kind==='total'?'No customers in this exhibition':('No '+label.toLowerCase());
+ modal(label,'<div class="report-head"><h3>'+esc(e.name)+'</h3><p class="muted">'+esc(e.location)+' · '+esc(e.start)+' → '+esc(e.end)+' · Stall: '+esc(e.stall||'-')+'</p></div><div class="card" style="margin-bottom:10px"><b>'+esc(label)+'</b><div class="kpi" style="margin-top:4px">'+count+'</div></div><div class="card tablewrap"><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th><th>Customer</th><th>Type</th><th>Weight</th></tr>'+(rows||'<tr><td colspan="9" class="empty">'+esc(empty)+'</td></tr>')+'</table></div><div class="actions"><button class="orange" onclick="printExpoDetail('+id+',\''+esc(kind)+'\',\''+esc(label)+'\')">🖨️ Print This</button><button class="light" onclick="exhibitionReport('+id+')">← Back to Summary</button></div>');
+}
 function exhibitionReport(id){
- let e=db.exhibitions.find(x=>x.id==id),a=db.orders.filter(o=>o.exhibitionId==id),w=a.reduce((s,o)=>s+(+o.weight||0),0);
+ let d=expoData(id),e=d.e;
  if(!e)return;
  if(!Array.isArray(e.existingCustomerIds))e.existingCustomerIds=[];
- let ids=[...new Set(a.map(o=>String(o.customerId)))];
- let newIds=ids.filter(cid=>exhibitionCustomerType(id,cid)==='New'), oldIds=ids.filter(cid=>exhibitionCustomerType(id,cid)==='Existing');
- let rows=ids.map((cid,i)=>{let c=cust(cid),ca=a.filter(o=>String(o.customerId)===String(cid)),types=[...new Set(ca.map(o=>o.type))].join(' / '),cw=ca.reduce((s,o)=>s+(+o.weight||0),0),ct=exhibitionCustomerType(id,cid);return '<tr><td>'+(i+1)+'</td><td><b>'+esc(c.shop||'-')+'</b></td><td>'+esc(c.name||'-')+'</td><td>'+esc(c.mobile||'-')+'</td><td>'+esc(ct==='New'?'🆕 New Customer':'🔁 Existing Customer')+'</td><td>'+esc(types||'-')+'</td><td>'+fmt(cw)+' g</td></tr>';}).join('');
- let newList=newIds.map((cid,i)=>{let c=cust(cid);return '<tr><td>'+(i+1)+'</td><td><b>'+esc(c.shop||'-')+'</b></td><td>'+esc(c.name||'-')+'</td><td>'+esc(c.mobile||'-')+'</td><td>'+esc(c.city||'-')+'</td><td>'+esc(c.state||'-')+'</td></tr>';}).join('');
- let oldList=oldIds.map((cid,i)=>{let c=cust(cid);return '<tr><td>'+(i+1)+'</td><td><b>'+esc(c.shop||'-')+'</b></td><td>'+esc(c.name||'-')+'</td><td>'+esc(c.mobile||'-')+'</td><td>'+esc(c.city||'-')+'</td><td>'+esc(c.state||'-')+'</td></tr>';}).join('');
  let eligibleExisting=db.customers.filter(c=>db.orders.some(o=>String(o.customerId)===String(c.id))).sort((x,y)=>(x.shop||x.name||'').localeCompare(y.shop||y.name||''));
- let chooser=eligibleExisting.map(c=>{let cid=String(c.id),checked=oldIds.includes(cid)?'checked':'',inExpo=ids.includes(cid);return '<label style="display:flex;gap:10px;align-items:center;padding:11px 12px;border-bottom:1px solid #eee;cursor:pointer"><input type="checkbox" '+checked+' '+(!inExpo?'disabled title="This customer has no order in this Expo"':'')+' onchange="toggleExpoExisting('+id+',\''+esc(cid)+'\',this.checked)"><span><b>'+esc(c.shop||'-')+'</b> — '+esc(c.name||'-')+' · 📱 '+esc(c.mobile||'-')+(inExpo?' <span style="color:#1f7a3f;font-weight:700">· This Expo</span>':' <span style="color:#777">· Not in this Expo</span>')+'</span></label>';}).join('');
- modal('Exhibition Report','<h3>'+esc(e.name)+'</h3><p>'+esc(e.location)+' · '+esc(e.start)+' → '+esc(e.end)+' · Stall: '+esc(e.stall||'-')+'</p><div class="card"><h3>👤 Choose Existing Customers for This Expo</h3><p class="muted">நம்மகிட்ட ஏற்கனவே வாங்கிய parties மட்டும் இங்கே காட்டப்படும். இந்த Expo-ல order போட்ட party-க்கு மட்டும் checkbox active இருக்கும். நீங்க tick பண்ணினா <b>🔁 Existing</b>; tick செய்யாத Expo party <b>🆕 New</b>.</p><div style="border:1px solid #ddd;border-radius:10px;overflow:hidden">'+(chooser||'<div class="empty">No customers/orders in this exhibition yet</div>')+'</div></div><div class="grid"><div class="card">Total Customers<div class="kpi">'+ids.length+'</div></div><div class="card">🆕 New Customers<div class="kpi">'+newIds.length+'</div></div><div class="card">🔁 Existing Customers<div class="kpi">'+oldIds.length+'</div></div><div class="card">Orders<div class="kpi">'+a.length+'</div></div><div class="card">Weight<div class="kpi">'+fmt(w)+' g</div></div><div class="card">Direct / SM<div class="kpi">'+a.filter(o=>o.type==='Direct').length+' / '+a.filter(o=>o.type==='SM').length+'</div></div></div><div class="card tablewrap"><h3>🆕 New Customers — This Expo</h3><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th></tr>'+(newList||'<tr><td colspan="6" class="empty">No new customers</td></tr>')+'</table></div><div class="card tablewrap"><h3>🔁 Existing Customers — This Expo</h3><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th></tr>'+(oldList||'<tr><td colspan="6" class="empty">No existing customers</td></tr>')+'</table></div><div class="card tablewrap"><h3>All Expo Customers — Direct / SM & Weight</h3><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>Customer Type</th><th>Direct / SM</th><th>Weight</th></tr>'+(rows||'<tr><td colspan="7" class="empty">No customers</td></tr>')+'</table></div><div class="actions"><button onclick="printExhibition('+id+')">Print Exhibition Report</button></div>');
+ let chooser=eligibleExisting.filter(c=>d.ids.includes(String(c.id))).map(c=>{let cid=String(c.id),checked=d.existing.includes(cid)?'checked':'';return '<label style="display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #eee;cursor:pointer"><input type="checkbox" '+checked+' onchange="toggleExpoExisting('+id+',\''+esc(cid)+'\',this.checked)"><span><b>'+esc(c.shop||'-')+'</b> — '+esc(c.name||'-')+' · 📱 '+esc(c.mobile||'-')+'</span></label>';}).join('');
+ let directLabel='Direct Customers <span class="muted" style="font-size:12px">(New '+d.directNew.length+' / Existing '+d.directExisting.length+')</span>';
+ let smLabel='SM Customers <span class="muted" style="font-size:12px">(New '+d.smNew.length+' / Existing '+d.smExisting.length+')</span>';
+ let cards='<div class="grid compact-expo-grid">'+
+ '<button class="card expo-kpi" onclick="expoDetail('+id+',\'total\',\'All Customers\')"><div class="muted">Total Customers</div><div class="kpi">'+d.ids.length+'</div><div class="muted">Tap to open</div></button>'+
+ '<button class="card expo-kpi" onclick="expoDetail('+id+',\'direct\',\'Direct Customers\')"><div class="muted">'+directLabel+'</div><div class="kpi">'+d.direct.length+'</div><div class="muted">🆕 '+d.directNew.length+' · 🔁 '+d.directExisting.length+'</div></button>'+
+ '<button class="card expo-kpi" onclick="expoDetail('+id+',\'sm\',\'SM Customers\')"><div class="muted">'+smLabel+'</div><div class="kpi">'+d.sm.length+'</div><div class="muted">🆕 '+d.smNew.length+' · 🔁 '+d.smExisting.length+'</div></button>'+
+ '<button class="card expo-kpi" onclick="expoDetail('+id+',\'direct\',\'Direct Customers\')"><div class="muted">Direct Weight</div><div class="kpi">'+fmt(d.directWeight)+' g</div><div class="muted">Tap to open</div></button>'+
+ '<button class="card expo-kpi" onclick="expoDetail('+id+',\'sm\',\'SM Customers\')"><div class="muted">SM Weight</div><div class="kpi">'+fmt(d.smWeight)+' g</div><div class="muted">Tap to open</div></button>'+
+ '<button class="card expo-kpi" onclick="expoDetail('+id+',\'total\',\'All Customers\')"><div class="muted">Total Weight</div><div class="kpi">'+fmt(d.totalWeight)+' g</div><div class="muted">Tap to open</div></button>'+
+ '<button class="card expo-kpi" onclick="expoDetail('+id+',\'new\',\'New Customers\')"><div class="muted">🆕 New Customers</div><div class="kpi">'+d.newer.length+'</div><div class="muted">Tap to open</div></button>'+
+ '<button class="card expo-kpi" onclick="expoDetail('+id+',\'existing\',\'Existing Customers\')"><div class="muted">🔁 Existing Customers</div><div class="kpi">'+d.existing.length+'</div><div class="muted">Tap to open</div></button>'+
+ '<button class="card expo-kpi" onclick="expoDetail('+id+',\'total\',\'All Customers\')"><div class="muted">Orders</div><div class="kpi">'+d.a.length+'</div><div class="muted">Tap to open</div></button>'+
+ '</div>';
+ let chooserBox=chooser?'<details class="card" style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:700">👤 Select Existing Customers</summary><p class="muted">இந்த Expo-ல order போட்ட party-களில் ஏற்கனவே நம்மகிட்ட வாங்கியவர்களை tick பண்ணுங்க. Tick செய்தவர்கள் Existing; மற்றவர்கள் New.</p><div style="border:1px solid #ddd;border-radius:10px;overflow:hidden">'+chooser+'</div></details>':'';
+ modal('Exhibition Report','<div class="report-head"><h3>'+esc(e.name)+'</h3><p class="muted">'+esc(e.location)+' · '+esc(e.start)+' → '+esc(e.end)+' · Stall: '+esc(e.stall||'-')+'</p></div>'+cards+chooserBox+'<div class="actions"><button class="orange" onclick="printExpoDetail('+id+',\'summary\',\'Exhibition Summary\')">🖨️ Print Summary</button><button onclick="printExpoDetail('+id+',\'direct\',\'Direct Customers\')">🖨️ Print Direct</button><button onclick="printExpoDetail('+id+',\'sm\',\'SM Customers\')">🖨️ Print SM</button><button class="light" onclick="expoDetail('+id+',\'new\',\'New Customers\')">🆕 New List</button><button class="light" onclick="expoDetail('+id+',\'existing\',\'Existing Customers\')">🔁 Existing List</button></div>');
 }
-function printExhibition(id){
- let e=db.exhibitions.find(x=>x.id==id),a=db.orders.filter(o=>o.exhibitionId==id),ids=[...new Set(a.map(o=>String(o.customerId)))];
- let nw=ids.filter(cid=>exhibitionCustomerType(id,cid)==='New'),ex=ids.filter(cid=>exhibitionCustomerType(id,cid)==='Existing');
- let rows=ids.map((cid,i)=>{let c=cust(cid),ca=a.filter(o=>String(o.customerId)===String(cid)),types=[...new Set(ca.map(o=>o.type))].join(' / '),w=ca.reduce((s,o)=>s+(+o.weight||0),0);return '<tr><td>'+(i+1)+'</td><td>'+esc(c.shop||'-')+'</td><td>'+esc(c.name||'-')+'</td><td>'+esc(c.mobile||'-')+'</td><td>'+esc(exhibitionCustomerType(id,cid))+'</td><td>'+esc(types||'-')+'</td><td>'+fmt(w)+' g</td></tr>';}).join('');
- printHtml('Exhibition Report','<h2>'+esc(e.name)+'</h2><p>'+esc(e.location)+' | '+esc(e.start)+' → '+esc(e.end)+' | Stall: '+esc(e.stall||'-')+'</p><p><b>Total Customers:</b> '+ids.length+' &nbsp; <b>New:</b> '+nw.length+' &nbsp; <b>Existing:</b> '+ex.length+' &nbsp; <b>Direct / SM:</b> '+a.filter(o=>o.type==='Direct').length+' / '+a.filter(o=>o.type==='SM').length+' &nbsp; <b>Total Weight:</b> '+fmt(a.reduce((s,o)=>s+(+o.weight||0),0))+' g</p><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>Customer Type</th><th>Direct / SM</th><th>Weight</th></tr>'+rows+'</table>');
+function printExpoDetail(id,kind,title){
+ let d=expoData(id),e=d.e;
+ if(kind==='summary'){
+  let body='<h2>'+esc(e.name)+'</h2><p>'+esc(e.location)+' | '+esc(e.start)+' → '+esc(e.end)+' | Stall: '+esc(e.stall||'-')+'</p><table><tr><th>Summary</th><th>Count / Weight</th></tr><tr><td>Total Customers</td><td>'+d.ids.length+'</td></tr><tr><td>Direct Customers</td><td>'+d.direct.length+' (New '+d.directNew.length+' / Existing '+d.directExisting.length+')</td></tr><tr><td>SM Customers</td><td>'+d.sm.length+' (New '+d.smNew.length+' / Existing '+d.smExisting.length+')</td></tr><tr><td>Direct Weight</td><td>'+fmt(d.directWeight)+' g</td></tr><tr><td>SM Weight</td><td>'+fmt(d.smWeight)+' g</td></tr><tr><td>Total Weight</td><td>'+fmt(d.totalWeight)+' g</td></tr><tr><td>Total Orders</td><td>'+d.a.length+'</td></tr></table>';
+  printHtml('Exhibition Summary',body);return;
+ }
+ let rows=expoRows(id,kind);
+ printHtml(title,'<h2>'+esc(e.name)+' — '+esc(title)+'</h2><p>'+esc(e.location)+' | '+esc(e.start)+' → '+esc(e.end)+' | Stall: '+esc(e.stall||'-')+'</p><table><tr><th>#</th><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th><th>Customer</th><th>Type</th><th>Weight</th></tr>'+(rows||'<tr><td colspan="9">No customers</td></tr>')+'</table>');
 }
 function renderExhibitions(){
  $('exhibitions').innerHTML='<h2>Exhibitions</h2><div class="actions"><button class="orange" onclick="openExhibition()">+ New Exhibition</button></div><div class="tiles">'+(db.exhibitions.map(e=>{let a=db.orders.filter(o=>o.exhibitionId==e.id);return '<div class="tile"><h3>'+esc(e.name)+'</h3><p class="muted">'+esc(e.location)+'<br>'+esc(e.start)+' → '+esc(e.end)+'<br>Stall: '+esc(e.stall||'-')+'</p><p><b>Customers:</b> '+new Set(a.map(o=>o.customerId)).size+'<br><b>Orders:</b> '+a.length+'<br><b>Weight:</b> '+fmt(a.reduce((s,o)=>s+(+o.weight||0),0))+'g</p><button onclick="exhibitionReport('+e.id+')">View Report</button> <button class="light" onclick="openExhibition('+e.id+')">Edit</button> <button class="red" onclick="delExhibition('+e.id+')">Delete</button></div>'}).join('')||'<div class="empty">No exhibitions</div>')+'</div>';

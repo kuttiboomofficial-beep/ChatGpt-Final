@@ -159,7 +159,7 @@ function save(){localStorage.setItem(KEY,JSON.stringify(db))}
 function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>{$('toast').style.display='none'},1800)}
 function cust(id){return db.customers.find(x=>String(x.id)===String(id))||{name:'Unknown',shop:'',mobile:'',city:'',state:'',address:''}}
 function ord(id){return db.orders.find(x=>String(x.id)===String(id))}
-function fmt(n){return Number(n||0).toFixed(3)}
+function fmt(n){return Number(n||0).toFixed(2)}
 function badge(s){s=s||'Pending';return '<span class="status s-'+esc(s)+'">'+esc(s)+'</span>'}
 function nav(){
  const a=[['dashboard','Dashboard'],['customers','Customer CRM'],['orders','Order Management'],['production','Production'],['reports','Reports'],['whatsapp','WhatsApp'],['templates','Templates'],['exhibitions','Exhibitions'],['print','Print Center'],['scanner','Visiting Card Scanner'],['backup','Backup & Restore'],['settings','Settings'],['menu','☰ Menu']];
@@ -291,7 +291,12 @@ function openOrder(id){
 }
 function updateOrderCustomerInfo(){
  let id=$('oc')?.value;
- if($('orderCustomerInfo'))$('orderCustomerInfo').textContent=id?(cust(id).name||'-')+' - 📱 '+(cust(id).mobile||'-'):'';
+ if(!$('orderCustomerInfo'))return;
+ if(!id){$('orderCustomerInfo').textContent='';return;}
+ const c=cust(id);
+ const orderCount=db.orders.filter(o=>String(o.customerId)===String(id)).length;
+ const label=orderCount>0?'🔁 Existing Customer':'🆕 New Customer';
+ $('orderCustomerInfo').innerHTML=esc(c.name||'-')+' - 📱 '+esc(c.mobile||'-')+' &nbsp; <b>'+label+'</b>';
 }
 function saveOrder(id){
  let x={orderNo:$('ono').value.trim(),orderDate:$('od').value,customerId:Number($('oc').value),exhibitionId:$('oex').value?Number($('oex').value):'',type:$('ot').value,weight:Number($('ow').value)||0,touch:$('touch').value.trim(),screw:$('screw').value.trim(),ladyRing:$('lr').value.trim(),gentRing:$('gr').value.trim(),huid:$('huid').value,advanceMode:$('am').value,advanceAmount:Number($('adv').value)||0,startDate:$('sd').value,status:String($('orderStatus').value),delivered:$('dd').value,notes:$('onotes').value.trim()};

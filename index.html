@@ -93,14 +93,14 @@ td button{margin:2px;padding:8px 10px;font-size:13px}
 @media(max-width:650px){#printPageBtn{float:none;position:absolute;right:14px;top:14px;margin:0;padding:9px 11px;font-size:13px}}
 
 .city-field{position:relative}.city-suggestions{display:none;position:absolute;left:0;right:0;top:100%;z-index:100;background:#fff;border:1px solid #d5d5d5;border-radius:10px;box-shadow:0 8px 22px #0002;overflow:hidden;margin-top:4px}.city-option{width:100%;border:0;border-radius:0;background:#fff;color:#222;text-align:left;padding:11px 13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}.city-option:hover,.city-option:focus{background:#f6f6f6}.city-option span{color:#777;font-size:13px;margin-left:12px}
-.print-only{display:none}.customer-type-select{min-width:170px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;background:#fff;font-weight:700}
-@media print{.no-print{display:none!important}.print-only{display:inline!important}}
+.security-overlay{position:fixed;inset:0;background:#111;display:none;align-items:center;justify-content:center;padding:18px;z-index:10000}.security-overlay.show{display:flex}.security-box{width:min(420px,100%);background:#fff;border-radius:20px;padding:26px;box-shadow:0 20px 70px #0008}.security-box h2{margin:0 0 8px;font-size:26px}.security-box p{color:#666;line-height:1.45}.security-box input{font-size:22px;text-align:center;letter-spacing:7px}.security-error{min-height:20px;color:#c62828;font-size:13px;font-weight:700;margin-top:8px}.security-hint{font-size:12px;color:#888;margin-top:10px}.print-only{display:none}.customer-type-select{min-width:170px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;background:#fff;font-weight:700}
+@media print{.no-print{display:none!important}.print-only{display:inline!important}.security-overlay{display:none!important}}
 
 .compact-expo-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.expo-kpi{border:1px solid #ddd;text-align:left;cursor:pointer;min-height:108px;padding:14px}.expo-kpi:hover{transform:translateY(-1px)}.expo-kpi .kpi{font-size:26px;margin:5px 0}.report-head{margin-bottom:10px}.report-head h3{margin:0 0 4px}@media(max-width:800px){.compact-expo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
-<header><div id="brand">SHREE JI GOLD CREATOR LLP</div><div id="subtitle">Customer CRM • Orders • Production • WhatsApp • Reports</div><button id="printPageBtn" class="light no-print" onclick="printCurrentPage()">🖨️ Print Page</button></header>
+<header><div id="brand">SHREE JI GOLD CREATOR LLP</div><div id="subtitle">Customer CRM • Orders • Production • WhatsApp • Reports</div><button id="lockBtn" class="light no-print" onclick="lockApp()">🔒 Lock</button><button id="printPageBtn" class="light no-print" onclick="printCurrentPage()">🖨️ Print Page</button></header>
 <nav id="nav"></nav>
 <main>
 <section id="dashboard"></section>
@@ -118,7 +118,7 @@ td button{margin:2px;padding:8px 10px;font-size:13px}
 <section id="menu"></section>
 </main>
 <div id="modalbg" class="modalbg"><div id="modal" class="modal"></div></div>
-<div id="toast" class="toast"></div>
+<div id="toast" class="toast"></div><div id="securityOverlay" class="security-overlay" aria-modal="true" role="dialog"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
@@ -126,7 +126,7 @@ const KEY='sjc_business_v7';
 const OLD_KEYS=['sjc_business_v6','sjc_business_v5','sjc_business_v3'];
 const STATUS=['Pending','Started','Finished','Delivered','Cancelled'];
 const defaults={
- settings:{company:'SHREE JI GOLD CREATOR LLP',subtitle:'Customer CRM • Orders • Production • WhatsApp • Reports',phone:'',address:'',country:'91',defaultType:'Direct',defaultStatus:'Pending',version:'7.1.0',logo:''},
+ settings:{company:'SHREE JI GOLD CREATOR LLP',subtitle:'Customer CRM • Orders • Production • WhatsApp • Reports',phone:'',address:'',country:'91',defaultType:'Direct',defaultStatus:'Pending',version:'7.1.0',logo:'',security:{enabled:false,pinHash:'',autoLockMinutes:10}},
  customers:[],orders:[],exhibitions:[],
  templates:[
   {id:'confirm',name:'Order Received Thank You',body:'Dear {{name}},\\n\\nThank you for your valuable order.\\nOrder: {{order}}\\nWeight: {{weight}}g\\n\\nThank you.'},
@@ -147,6 +147,7 @@ const defaults={
  ]
 };
 let db=load(),current='dashboard',scanFile=null,bulkSel=new Set();
+let securityUnlocked=false,securityTimer=null,securityBusy=false;
 // Exhibition-wise manual New/Existing classification. Existing customer IDs are chosen by the user.
 (function initExpoCustomerTypes(){
  db.exhibitions.forEach(e=>{
@@ -158,6 +159,45 @@ let db=load(),current='dashboard',scanFile=null,bulkSel=new Set();
  });
  save();
 })();
+
+
+function securityHash(v){
+  let h=2166136261;v=String(v);for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}
+  return ('00000000'+(h>>>0).toString(16)).slice(-8)+('00000000'+(Math.imul(h^0x9e3779b9,2654435761)>>>0).toString(16)).slice(-8);
+}
+function securityEnabled(){return !!(db.settings&&db.settings.security&&db.settings.security.enabled&&db.settings.security.pinHash)}
+function showSecurityScreen(mode='unlock',msg=''){
+  const ov=$('securityOverlay');if(!ov)return;
+  const setup=mode==='setup';
+  ov.innerHTML='<div class="security-box"><div style="font-size:42px">🔐</div><h2>'+ (setup?'Secure SHREE JI CONNECT':'SHREE JI CONNECT Locked') +'</h2><p>'+ (setup?'Create a 4–6 digit PIN. This PIN protects casual access to the app on this device.':'Enter your PIN to continue.') +'</p><label>PIN</label><input id="securityPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••••"><div id="securityConfirmWrap" style="display:'+(setup?'block':'none')+'"><label>Confirm PIN</label><input id="securityPin2" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••••"></div><div id="securityError" class="security-error">'+esc(msg||'')+'</div><div class="actions"><button class="orange" id="securityAction">'+(setup?'Create PIN':'Unlock')+'</button>'+(setup?'':'<button class="light" onclick="lockApp()">Lock</button>')+'</div><div class="security-hint">For stronger protection, also use your phone/PC screen lock. Never share your PIN.</div></div>';
+  ov.classList.add('show');
+  const pin=$('securityPin');pin.focus();
+  $('securityAction').onclick=setup?setupSecurity:unlockSecurity;
+  pin.onkeydown=e=>{if(e.key==='Enter')$(setup?'securityPin2':'securityAction').focus()};
+  if(setup)$('securityPin2').onkeydown=e=>{if(e.key==='Enter')setupSecurity()};
+}
+function setupSecurity(){
+  const a=$('securityPin')?.value.trim(),b=$('securityPin2')?.value.trim(),err=$('securityError');
+  if(!/^\d{4,6}$/.test(a))return err.textContent='PIN must be 4 to 6 digits.';
+  if(a!==b)return err.textContent='PINs do not match.';
+  db.settings.security={enabled:true,pinHash:securityHash(a),autoLockMinutes:Number(db.settings.security?.autoLockMinutes)||10};save();securityUnlocked=true;$('securityOverlay').classList.remove('show');startSecurityTimer();toast('Security enabled');
+}
+function unlockSecurity(){
+  if(securityBusy)return;securityBusy=true;
+  const pin=$('securityPin')?.value.trim(),err=$('securityError');
+  if(securityHash(pin)!==db.settings.security.pinHash){securityBusy=false;err.textContent='Wrong PIN. Try again.';$('securityPin').value='';$('securityPin').focus();return}
+  securityUnlocked=true;securityBusy=false;$('securityOverlay').classList.remove('show');startSecurityTimer();toast('Unlocked');
+}
+function lockApp(){
+  if(!securityEnabled())return showSecurityScreen('setup');
+  securityUnlocked=false;clearTimeout(securityTimer);showSecurityScreen('unlock');
+}
+function startSecurityTimer(){
+  clearTimeout(securityTimer);if(!securityUnlocked||!securityEnabled())return;
+  const mins=Math.max(1,Number(db.settings.security.autoLockMinutes)||10);securityTimer=setTimeout(()=>lockApp(),mins*60*1000);
+}
+function securityActivity(){if(securityUnlocked)startSecurityTimer()}
+['click','keydown','touchstart','scroll'].forEach(ev=>document.addEventListener(ev,securityActivity,{passive:true}));
 
 function $(id){return document.getElementById(id)}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -657,23 +697,43 @@ async function scanCard(){
 }
 function clearScan(){scanFile=null;if($('cardFile'))$('cardFile').value='';['snshop','sn','sm','sa','sc','ssc','saddr','ocrText'].forEach(id=>{if($(id))$(id).value=''});if($('cardImg')){$('cardImg').style.display='none';$('cardImg').removeAttribute('src')}if($('scanBtn'))$('scanBtn').disabled=true;if($('ocrStatus'))$('ocrStatus').textContent='Choose a card photo to begin.';const b=$('scannerCitySuggestions');if(b){b.innerHTML='';b.style.display='none';}}
 function saveScan(){const name=$('sn').value.trim(),mobile=$('sm').value.replace(/\D/g,'').slice(-10),city=$('sc').value.trim();if(!name||mobile.length!==10)return toast('Review Customer Name and 10-digit Mobile');db.customers.push({id:Date.now(),name,shop:$('snshop').value.trim(),contactPerson:'',mobile,alt:$('sa').value.replace(/\D/g,'').slice(-10),city,address:$('saddr').value.trim(),state:cityState(city)||$('ssc').value.trim(),exhibition:'',notes:'From visiting card scanner',dateAdded:new Date().toISOString().slice(0,10)});save();toast('Customer saved');clearScan();go('customers');}
-function backup(){
- let payload={app:'SHREE JI CONNECT',version:db.settings.version,exportedAt:new Date().toISOString(),data:db};
- let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));a.download='shree-ji-connect-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('Backup downloaded');
+function bytesToB64(bytes){let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin)}
+function b64ToBytes(s){let bin=atob(s),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return a}
+async function deriveBackupKey(pin,salt){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:120000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function backup(){
+ if(!securityEnabled())return showSecurityScreen('setup');
+ const pin=prompt('Enter your PIN to create encrypted backup:');if(!pin)return;
+ if(securityHash(pin)!==db.settings.security.pinHash)return toast('Wrong PIN');
+ try{const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),key=await deriveBackupKey(pin,salt);const payload={app:'SHREE JI CONNECT',version:db.settings.version,exportedAt:new Date().toISOString(),data:db};const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(payload)));const out={format:'SJC_ENCRYPTED_BACKUP_V1',salt:bytesToB64(salt),iv:bytesToB64(iv),data:bytesToB64(new Uint8Array(cipher))};let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out)],{type:'application/json'}));a.download='shree-ji-connect-encrypted-backup-'+new Date().toISOString().slice(0,10)+'.sjc.json';a.click();toast('Encrypted backup downloaded');}catch(e){console.error(e);toast('Backup failed')}
 }
-function restoreFile(e){
+function backupPlain(){
+ let payload={app:'SHREE JI CONNECT',version:db.settings.version,exportedAt:new Date().toISOString(),data:db};let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));a.download='shree-ji-connect-plain-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('Plain backup downloaded');
+}
+async function restoreFile(e){
  let f=e.target.files[0];if(!f)return;
- let r=new FileReader();r.onload=()=>{try{let p=JSON.parse(r.result),x=p.data||p;if(!x.customers||!x.orders)throw 1;if(!confirm('Restore this backup? Current local data will be replaced.'))return;db={...structuredClone(defaults),...x,settings:{...defaults.settings,...(x.settings||{})},templates:x.templates||structuredClone(defaults.templates)};save();renderAll();toast('Data restored')}catch(z){toast('Invalid backup')}};r.readAsText(f);
+ try{let p=JSON.parse(await f.text()),x;
+   if(p.format==='SJC_ENCRYPTED_BACKUP_V1'){
+     const pin=prompt('Enter backup PIN to decrypt:');if(!pin)return;
+     const key=await deriveBackupKey(pin,b64ToBytes(p.salt));const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToBytes(p.iv)},key,b64ToBytes(p.data));const q=JSON.parse(new TextDecoder().decode(plain));x=q.data||q;
+   }else{x=p.data||p;if(!confirm('This is a plain backup. Restore it?'))return}
+   if(!x.customers||!x.orders)throw 1;if(!confirm('Restore this backup? Current local data will be replaced.'))return;
+   db={...structuredClone(defaults),...x,settings:{...defaults.settings,...(x.settings||{}),security:{...defaults.settings.security,...(x.settings?.security||{})}},templates:x.templates||structuredClone(defaults.templates)};save();renderAll();toast('Data restored');startSecurityTimer();
+ }catch(z){console.error(z);toast('Invalid backup or wrong PIN')}
 }
 function renderBackup(){
- $('backup').innerHTML='<h2>Backup & Restore</h2><div class="card"><p>Your data is stored locally in this browser/device. Export backups regularly.</p><div class="actions"><button class="orange" onclick="backup()">Export / Download Backup</button><label style="display:inline-block;background:#eee;color:#222;border-radius:10px;padding:11px 16px;cursor:pointer;font-weight:700">Import Backup<input type="file" accept=".json" style="display:none" onchange="restoreFile(event)"></label><button class="red" onclick="resetData()">Reset Data</button></div><p class="danger-note">Important: local browser data can be lost if browser storage is cleared. Keep the JSON backup safely.</p></div>';
+ $('backup').innerHTML='<h2>Backup & Restore</h2><div class="card"><h3>🔐 Secure Backup</h3><p>Your main backup is <b>AES-256 encrypted</b> with your PIN. Keep the backup file and PIN safe.</p><div class="actions"><button class="orange" onclick="backup()">🔐 Export Encrypted Backup</button><label style="display:inline-block;background:#eee;color:#222;border-radius:10px;padding:11px 16px;cursor:pointer;font-weight:700">🔓 Import Backup<input type="file" accept=".json,.sjc.json" style="display:none" onchange="restoreFile(event)"></label><button class="light" onclick="backupPlain()">Export Plain JSON</button><button class="red" onclick="resetData()">Reset Data</button></div><p class="danger-note">Encrypted backup is recommended. Plain JSON contains customer/order data without encryption.</p></div>';
 }
 function resetData(){if(confirm('RESET ALL APP DATA? This cannot be undone. Export a backup first.')){localStorage.removeItem(KEY);location.reload()}}
 function renderSettings(){
- $('settings').innerHTML='<h2>Settings</h2><div class="card"><div class="formgrid"><div><label>Company Name</label><input id="setCompany" value="'+esc(db.settings.company)+'"></div><div><label>Company Subtitle</label><input id="setSubtitle" value="'+esc(db.settings.subtitle)+'"></div><div><label>Company Phone</label><input id="setPhone" value="'+esc(db.settings.phone)+'"></div><div><label>WhatsApp Country Code</label><input id="setCountry" value="'+esc(db.settings.country)+'"></div><div class="full"><label>Company Address</label><textarea id="setAddress">'+esc(db.settings.address)+'</textarea></div><div><label>Default Order Type</label><select id="setType"><option '+(db.settings.defaultType==='Direct'?'selected':'')+'>Direct</option><option '+(db.settings.defaultType==='SM'?'selected':'')+'>SM</option></select></div><div><label>Default Status</label><select id="setStatus">'+STATUS.map(s=>'<option '+(db.settings.defaultStatus===s?'selected':'')+'>'+s+'</option>').join('')+'</select></div><div><label>Theme</label><input value="Orange + Black Professional" disabled></div><div><label>App Version</label><input value="'+esc(db.settings.version)+'" disabled></div></div><div class="actions"><button class="orange" onclick="saveSettings()">Save Settings</button><button onclick="go(\'backup\')">Backup & Restore</button><button class="red" onclick="resetData()">Reset Data</button></div></div><div class="card"><h3>About App</h3><p>SHREE JI CONNECT — Business Class CRM<br>Version '+esc(db.settings.version)+'<br>Offline-first local database.</p></div>';
+ $('settings').innerHTML='<h2>Settings</h2><div class="card"><div class="formgrid"><div><label>Company Name</label><input id="setCompany" value="'+esc(db.settings.company)+'"></div><div><label>Company Subtitle</label><input id="setSubtitle" value="'+esc(db.settings.subtitle)+'"></div><div><label>Company Phone</label><input id="setPhone" value="'+esc(db.settings.phone)+'"></div><div><label>WhatsApp Country Code</label><input id="setCountry" value="'+esc(db.settings.country)+'"></div><div class="full"><label>Company Address</label><textarea id="setAddress">'+esc(db.settings.address)+'</textarea></div><div><label>Default Order Type</label><select id="setType"><option '+(db.settings.defaultType==='Direct'?'selected':'')+'>Direct</option><option '+(db.settings.defaultType==='SM'?'selected':'')+'>SM</option></select></div><div><label>Default Status</label><select id="setStatus">'+STATUS.map(s=>'<option '+(db.settings.defaultStatus===s?'selected':'')+'>'+s+'</option>').join('')+'</select></div><div><label>Theme</label><input value="Orange + Black Professional" disabled></div><div><label>App Version</label><input value="'+esc(db.settings.version)+'" disabled></div></div><div class="actions"><button class="orange" onclick="saveSettings()">Save Settings</button><button onclick="go(\'backup\')">Backup & Restore</button><button class="red" onclick="resetData()">Reset Data</button></div></div><div class="card"><h3>🔐 App Security</h3><p>Protect the app on this device with a PIN and automatic locking.</p><div class="formgrid"><div><label>Auto Lock</label><select id="setAutoLock"><option value="5" '+(Number(db.settings.security?.autoLockMinutes)===5?'selected':'')+'>5 minutes</option><option value="10" '+(Number(db.settings.security?.autoLockMinutes)===10?'selected':'')+'>10 minutes</option><option value="15" '+(Number(db.settings.security?.autoLockMinutes)===15?'selected':'')+'>15 minutes</option></select></div><div><label>PIN Status</label><input value="'+(securityEnabled()?'Enabled':'Not set')+'" disabled></div></div><div class="actions"><button class="orange" onclick="changeSecurityPin()">Change PIN</button><button onclick="lockApp()">🔒 Lock Now</button></div></div><div class="card"><h3>About App</h3><p>SHREE JI CONNECT — Business Class CRM<br>Version '+esc(db.settings.version)+'<br>Offline-first local database.</p></div>';
+}
+function changeSecurityPin(){
+ if(!securityEnabled())return showSecurityScreen('setup');
+ const old=prompt('Enter current PIN:');if(old===null)return;if(securityHash(old)!==db.settings.security.pinHash)return toast('Wrong current PIN');
+ const a=prompt('Enter new 4–6 digit PIN:');if(!a||!/\d{4,6}/.test(a))return toast('PIN must be 4–6 digits');const b=prompt('Confirm new PIN:');if(a!==b)return toast('PINs do not match');db.settings.security.pinHash=securityHash(a);save();toast('PIN changed');lockApp();
 }
 function saveSettings(){
- db.settings.company=$('setCompany').value.trim();db.settings.subtitle=$('setSubtitle').value.trim();db.settings.phone=$('setPhone').value.trim();db.settings.country=$('setCountry').value.replace(/\D/g,'')||'91';db.settings.address=$('setAddress').value.trim();db.settings.defaultType=$('setType').value;db.settings.defaultStatus=$('setStatus').value;save();renderAll();toast('Settings saved');
+ db.settings.company=$('setCompany').value.trim();db.settings.subtitle=$('setSubtitle').value.trim();db.settings.phone=$('setPhone').value.trim();db.settings.country=$('setCountry').value.replace(/\D/g,'')||'91';db.settings.address=$('setAddress').value.trim();db.settings.defaultType=$('setType').value;db.settings.defaultStatus=$('setStatus').value;db.settings.security={...defaults.settings.security,...(db.settings.security||{}),autoLockMinutes:Number($('setAutoLock')?.value)||10};save();renderAll();startSecurityTimer();toast('Settings saved');
 }
 function renderMenu(){
  $('menu').innerHTML='<h2>Menu</h2><div class="tiles">'+[['dashboard','Dashboard'],['customers','Customer CRM'],['orders','Order Management'],['production','Production'],['reports','Database Reports'],['whatsapp','WhatsApp Center'],['templates','Message Templates'],['exhibitions','Exhibitions'],['print','Print Center'],['scanner','Visiting Card Scanner'],['backup','Backup & Restore'],['settings','Settings']].map(x=>'<div class="tile"><h3>'+x[1]+'</h3><button class="orange" onclick="go(\''+x[0]+'\')">Open</button></div>').join('')+'</div>';
@@ -709,6 +769,7 @@ function renderAll(){
  renderDashboard();renderCustomers();renderOrders();renderProduction();renderReports();renderWhatsApp();renderTemplates();renderExhibitions();renderPrint();renderScanner();renderBackup();renderSettings();renderMenu();nav();
 }
 go('dashboard');
+if(securityEnabled()){securityUnlocked=false;showSecurityScreen('unlock')}else{securityUnlocked=false;showSecurityScreen('setup')}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});}
 </script>
 </body>

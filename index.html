@@ -120,7 +120,6 @@ td button{margin:2px;padding:8px 10px;font-size:13px}
 <div id="modalbg" class="modalbg"><div id="modal" class="modal"></div></div>
 <div id="toast" class="toast"></div><div id="securityOverlay" class="security-overlay" aria-modal="true" role="dialog"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 const KEY='sjc_business_v7';
 const OLD_KEYS=['sjc_business_v6','sjc_business_v5','sjc_business_v3'];
@@ -263,31 +262,8 @@ function findCityKey(value){
   if(!q)return '';
   return CITY_NAMES.find(c=>c.toLowerCase()===q) || CITY_NAMES.find(c=>c.toLowerCase().replace(/[^a-z0-9]/g,'')===q.replace(/[^a-z0-9]/g,'')) || '';
 }
-async function lookupCityStateOnline(value){
-  const q=String(value||'').trim();
-  if(!q)return '';
-  const local=cityState(q);
-  if(local)return local;
-  try{
-    const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=in&addressdetails=1&q='+encodeURIComponent(q+', India');
-    const res=await fetch(url,{headers:{'Accept':'application/json'}});
-    if(!res.ok)return '';
-    const data=await res.json();
-    const hit=data.find(x=>x.address&&(x.address.state||x.address.state_district));
-    const st=hit?.address?.state||'';
-    if(st){
-      if($('cstate') && $('cc') && $('cc').value.trim().toLowerCase()===q.toLowerCase()) $('cstate').value=st;
-      if($('ssc') && $('sc') && $('sc').value.trim().toLowerCase()===q.toLowerCase()) $('ssc').value=st;
-    }
-    return st;
-  }catch(e){return '';}
-}
-async function resolveCityState(value){
-  const q=String(value||'').trim();
-  const local=cityState(q);
-  if(local)return local;
-  return await lookupCityStateOnline(q);
-}
+async function lookupCityStateOnline(value){ return cityState(value); }
+async function resolveCityState(value){ return cityState(value); }
 function renderCitySuggestions(){
   const city=$('cc'),box=$('citySuggestions');
   if(!city||!box)return;
@@ -681,7 +657,7 @@ function renderScannerCitySuggestions(){
 }
 function chooseScannerCity(name){$('sc').value=name;$('ssc').value=CITY_STATE[name]||'';const b=$('scannerCitySuggestions');if(b){b.innerHTML='';b.style.display='none';}}
 async function scanCard(){
- if(!scanFile)return;if(!window.Tesseract)return toast('OCR library unavailable. Check internet and reload.');
+ if(!scanFile)return;if(!window.Tesseract)return toast('Offline OCR is not bundled in this version. Use manual entry for the visiting card.');
  $('scanBtn').disabled=true;$('ocrStatus').textContent='Preparing image...';
  try{
   const processed=await preprocessCard(scanFile);$('ocrStatus').textContent='Scanning enhanced card...';

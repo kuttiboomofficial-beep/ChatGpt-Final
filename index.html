@@ -93,6 +93,8 @@ td button{margin:2px;padding:8px 10px;font-size:13px}
 @media(max-width:650px){#printPageBtn{float:none;position:absolute;right:14px;top:14px;margin:0;padding:9px 11px;font-size:13px}}
 
 .city-field{position:relative}.city-suggestions{display:none;position:absolute;left:0;right:0;top:100%;z-index:100;background:#fff;border:1px solid #d5d5d5;border-radius:10px;box-shadow:0 8px 22px #0002;overflow:hidden;margin-top:4px}.city-option{width:100%;border:0;border-radius:0;background:#fff;color:#222;text-align:left;padding:11px 13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}.city-option:hover,.city-option:focus{background:#f6f6f6}.city-option span{color:#777;font-size:13px;margin-left:12px}
+.print-only{display:none}.customer-type-select{min-width:170px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;background:#fff;font-weight:700}
+@media print{.no-print{display:none!important}.print-only{display:inline!important}}
 </style>
 </head>
 <body>
@@ -286,12 +288,19 @@ function saveCustomer(id){
 autoCityState();
  let x={name:$('cn').value.trim(),mobile:$('cm').value.trim(),shop:$('cs').value.trim(),alt:$('ca').value.trim(),city:$('cc').value.trim(),state:$('cstate').value.trim(),address:$('caddr').value.trim(),notes:$('cnotes').value.trim()};
  if(!x.name||!x.mobile)return toast('Name and mobile required');
- if(id)Object.assign(cust(id),x);else db.customers.push({id:Date.now(),...x,dateAdded:new Date().toISOString().slice(0,10)});
+ if(id)Object.assign(cust(id),x);else db.customers.push({id:Date.now(),...x,customerType:'New',dateAdded:new Date().toISOString().slice(0,10)});
  save();closeModal();renderAll();toast('Customer saved');
+}
+function setCustomerType(id,value){
+ const c=cust(id);
+ if(!c||!['New','Existing'].includes(value))return;
+ c.customerType=value;
+ save();
+ toast(value==='Existing'?'Marked as Existing Customer':'Marked as New Customer');
 }
 function renderCustomers(){
  let q=($('cq')?.value||'').toLowerCase(),a=db.customers.filter(c=>(c.name+' '+c.shop+' '+c.mobile+' '+c.city+' '+c.state).toLowerCase().includes(q));
- $('customers').innerHTML=`<h2>Customer CRM</h2><div class="actions"><button class="orange" onclick="openCustomer()">+ New Customer</button><button class="no-print" onclick="printCustomers()">🖨️ Print Customers</button><input id="cq" placeholder="Search customer / shop / mobile / city" value="${esc(q)}" oninput="renderCustomers()"></div><div class="card tablewrap">${a.length?`<table><tr><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th><th>Customer Type</th><th class="no-print">Actions</th></tr>${a.map(c=>`<tr><td><b>${esc(c.shop||'-')}</b></td><td>${esc(c.name||'-')}</td><td>${esc(c.mobile||'-')}</td><td>${esc(c.city||'-')}</td><td>${esc(c.state||'-')}</td><td>${db.orders.some(o=>String(o.customerId)===String(c.id))?'<b style="color:#1f7a3f">🔁 Existing Customer</b>':'<b style="color:#d66a00">🆕 New Customer</b>'}</td><td class="no-print"><button class="light" onclick="openCustomer(${c.id})">Edit</button><button class="green" onclick="openWA(${c.id})">WA</button><button class="red" onclick="deleteCustomer(${c.id})">Delete</button></td></tr>`).join('')}</table>`:'<div class="empty">No customers found</div>'}</div>`;
+ $('customers').innerHTML=`<h2>Customer CRM</h2><div class="actions"><button class="orange" onclick="openCustomer()">+ New Customer</button><button class="no-print" onclick="printCustomers()">🖨️ Print Customers</button><input id="cq" placeholder="Search customer / shop / mobile / city" value="${esc(q)}" oninput="renderCustomers()"></div><div class="card tablewrap">${a.length?`<table><tr><th>Jewellery Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>State</th><th>Customer Type</th><th class="no-print">Actions</th></tr>${a.map(c=>{let current=c.customerType||(db.orders.some(o=>String(o.customerId)===String(c.id))?'Existing':'New');return `<tr><td><b>${esc(c.shop||'-')}</b></td><td>${esc(c.name||'-')}</td><td>${esc(c.mobile||'-')}</td><td>${esc(c.city||'-')}</td><td>${esc(c.state||'-')}</td><td><select class="customer-type-select no-print" onchange="setCustomerType(${c.id},this.value)"><option value="New" ${current==='New'?'selected':''}>🆕 New Customer</option><option value="Existing" ${current==='Existing'?'selected':''}>🔁 Existing Customer</option></select><span class="print-only">${current==='Existing'?'🔁 Existing Customer':'🆕 New Customer'}</span></td><td class="no-print"><button class="light" onclick="openCustomer(${c.id})">Edit</button><button class="green" onclick="openWA(${c.id})">WA</button><button class="red" onclick="deleteCustomer(${c.id})">Delete</button></td></tr>`}).join('')}</table>`:'<div class="empty">No customers found</div>'}</div>`;
 }
 function deleteCustomer(id){if(confirm('Delete customer? Their orders will remain in the database.')){db.customers=db.customers.filter(c=>c.id!=id);save();renderAll();toast('Customer deleted')}}
 function openOrder(id){

@@ -175,11 +175,11 @@ function totals(){
 }
 function renderDashboard(){
  let t=totals();
- $('dashboard').innerHTML='<div class="hero"><div class="big">'+esc(db.settings.company)+'</div><p>'+esc(db.settings.subtitle)+'</p></div>'+
- '<h2>Dashboard</h2><div class="grid">'+
- [['Total Customers',db.customers.length],['Total Orders',db.orders.length],['Direct / SM',db.orders.filter(o=>o.type==='Direct').length+' / '+db.orders.filter(o=>o.type==='SM').length],['Total Weight',fmt(t.weight)+' g'],['Pending',t.pending],['Started',t.started],['Finished',t.finished],['Delivered',t.delivered],['Cancelled',t.cancelled]].map(x=>'<div class="card"><div class="muted">'+x[0]+'</div><div class="kpi">'+x[1]+'</div></div>').join('')+
- '</div><div class="card"><h2 style="font-size:22px">Quick Actions</h2><div class="quick"><button class="orange" onclick="openCustomer()">+ Customer</button><button class="orange" onclick="openOrder()">+ Order</button><button class="green" onclick="go(\'whatsapp\')">WhatsApp</button><button onclick="go(\'scanner\')">Scan Card</button><button onclick="go(\'reports\')">Reports</button></div></div>'+
- '<div class="card"><h3>Recent Orders</h3>'+recentOrders()+'</div>';
+ let directOrders=db.orders.filter(o=>o.type==='Direct');
+ let smOrders=db.orders.filter(o=>o.type==='SM');
+ let directWeight=directOrders.reduce((s,o)=>s+(+o.weight||0),0);
+ let smWeight=smOrders.reduce((s,o)=>s+(+o.weight||0),0);
+ $('dashboard').innerHTML='<div class="hero"><div class="big">'+esc(db.settings.company)+'</div><p>'+esc(db.settings.subtitle)+'</p></div>'+ '<h2>Dashboard</h2><div class="grid">'+ [['Total Customers',db.customers.length],['Total Orders',db.orders.length],['Direct / SM',directOrders.length+' / '+smOrders.length],['Direct Weight',fmt(directWeight)+' g'],['SM Weight',fmt(smWeight)+' g'],['Total Weight',fmt(t.weight)+' g'],['Pending',t.pending],['Started',t.started],['Finished',t.finished],['Delivered',t.delivered],['Cancelled',t.cancelled]].map(x=>'<div class="card"><div class="muted">'+x[0]+'</div><div class="kpi">'+x[1]+'</div></div>').join('')+ '</div><div class="card"><h2 style="font-size:22px">Quick Actions</h2><div class="quick"><button class="orange" onclick="openCustomer()">+ Customer</button><button class="orange" onclick="openOrder()">+ Order</button><button class="green" onclick="go(\'whatsapp\')">WhatsApp</button><button onclick="go(\'scanner\')">Scan Card</button><button onclick="go(\'reports\')">Reports</button></div></div>';
 }
 function recentOrders(){
  let a=db.orders.slice().reverse().slice(0,8);
